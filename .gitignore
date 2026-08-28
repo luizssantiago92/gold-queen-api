@@ -17,6 +17,7 @@ venv/
 
 # Logs
 *.log
+*.out
 *.err
 
 # IDE / OS

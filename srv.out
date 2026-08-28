@@ -1,2 +1,0 @@
-INFO:     127.0.0.1:60612 - "POST /v1/auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60612 - "POST /v1/chat/query HTTP/1.1" 200 OK
