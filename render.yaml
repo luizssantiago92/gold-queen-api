@@ -1,0 +1,33 @@
+# Render blueprint. Import this repository at https://render.com/deploy and
+# Render reads this file instead of asking for build and start commands.
+#
+# Secrets are marked sync:false so they are never committed here: Render will
+# prompt for each one during the first deploy.
+services:
+  - type: web
+    name: gold-queen-api
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ENVIRONMENT
+        value: production
+      # Supabase session pooler URL, with the +psycopg2 driver suffix.
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PLUGGY_CLIENT_ID
+        sync: false
+      - key: PLUGGY_CLIENT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # Comma-separated; add the Vercel domain once the frontend is deployed.
+      - key: CORS_ORIGINS
+        sync: false
