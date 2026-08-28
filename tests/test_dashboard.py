@@ -21,6 +21,14 @@ def test_overview_consolidates_connected_banks(auth_client: TestClient) -> None:
     assert 99.0 <= total_share <= 101.0
 
 
+def test_overview_reports_income_and_expenses(auth_client: TestClient) -> None:
+    auth_client.post("/v1/connections/sync", json={"item_id": "item-alpha"})
+
+    body = auth_client.get("/v1/dashboard/overview").json()
+    assert float(body["month_income"]) > 0
+    assert float(body["month_expenses"]) > 0
+
+
 def test_categories_breakdown_sums_to_one_hundred(auth_client: TestClient) -> None:
     auth_client.post("/v1/connections/sync", json={"item_id": "item-alpha"})
 

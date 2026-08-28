@@ -15,6 +15,10 @@ venv/
 *.db
 *.sqlite3
 
+# Logs
+*.log
+*.err
+
 # IDE / OS
 .idea/
 .DS_Store

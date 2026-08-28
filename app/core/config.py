@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,9 +13,9 @@ class Settings(BaseSettings):
 
     app_name: str = "Gold Queen API"
     environment: str = "development"
-    cors_origins: list[str] = Field(
-        default_factory=lambda: ["http://localhost:5173", "http://localhost:3000"]
-    )
+    # Kept as a raw string: pydantic-settings would try to JSON-decode a list field
+    # before any validator runs, which rejects the comma-separated form.
+    cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
     database_url: str = "sqlite:///./gold_queen.db"
 
@@ -33,19 +33,16 @@ class Settings(BaseSettings):
     max_bank_connections: int = 3
     chat_daily_limit: int = 10
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def split_origins(cls, value: object) -> object:
-        if isinstance(value, str):
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
-        return value
-
     @field_validator("database_url", mode="before")
     @classmethod
     def fallback_to_sqlite(cls, value: object) -> object:
         if not value:
             return "sqlite:///./gold_queen.db"
         return value
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @property
     def pluggy_enabled(self) -> bool:

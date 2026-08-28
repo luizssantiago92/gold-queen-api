@@ -8,10 +8,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
-os.environ.setdefault("JWT_SECRET", "test-secret-key-for-gold-queen-api")
-os.environ.setdefault("GEMINI_API_KEY", "")
-os.environ.setdefault("PLUGGY_CLIENT_ID", "")
-os.environ.setdefault("PLUGGY_CLIENT_SECRET", "")
+# Forced (not setdefault) so a developer's local .env can never leak into the suite:
+# tests must never reach a real database or a paid API.
+os.environ["DATABASE_URL"] = "sqlite://"
+os.environ["JWT_SECRET"] = "test-secret-key-for-gold-queen-api"
+os.environ["GEMINI_API_KEY"] = ""
+os.environ["PLUGGY_CLIENT_ID"] = ""
+os.environ["PLUGGY_CLIENT_SECRET"] = ""
 
 from app.core.database import get_session  # noqa: E402
 from app.main import app  # noqa: E402

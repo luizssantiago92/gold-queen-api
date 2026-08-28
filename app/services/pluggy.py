@@ -24,17 +24,18 @@ _API_KEY_TTL = timedelta(hours=1, minutes=45)
 
 _SANDBOX_INSTITUTIONS = ("Banco Itau", "Nubank", "Bradesco")
 _SANDBOX_MERCHANTS = (
-    ("Padaria do Reino", "Food"),
-    ("Taberna do Dragao", "Food"),
-    ("Carruagem Express", "Transport"),
-    ("Aluguel do Castelo", "Housing"),
-    ("Boticario Real", "Health"),
-    ("Academia de Cavaleiros", "Education"),
-    ("Teatro do Bardo", "Entertainment"),
-    ("Mercado de Sedas", "Shopping"),
-    ("Taxas do Reino", "Bills"),
-    ("Soldo Real", "Income"),
+    "Padaria do Reino",
+    "Taberna do Dragao",
+    "Carruagem Express",
+    "Aluguel do Castelo",
+    "Boticario Real",
+    "Academia de Cavaleiros",
+    "Teatro do Bardo",
+    "Loja de Sedas",
+    "Taxas do Reino",
 )
+
+_SANDBOX_SALARY = "Soldo Real"
 
 
 class PluggyAccount:
@@ -200,19 +201,28 @@ def _simulated_accounts(item_id: str) -> list[PluggyAccount]:
 def _simulated_transactions(account_id: str) -> list[PluggyTransaction]:
     rng = random.Random(_seed_for(account_id))
     today = date.today()
-    transactions: list[PluggyTransaction] = []
+    first_day = today.replace(day=1)
 
+    # One guaranteed salary credit so the demo always shows income against expenses.
+    transactions: list[PluggyTransaction] = [
+        PluggyTransaction(
+            transaction_id=f"{account_id}-tx-salary",
+            description=_SANDBOX_SALARY,
+            amount=Decimal(rng.randrange(400_000, 700_000)) / Decimal(100),
+            transaction_date=first_day,
+        )
+    ]
+
+    max_days_back = (today - first_day).days
     for index in range(rng.randrange(12, 20)):
-        merchant, _category = _SANDBOX_MERCHANTS[rng.randrange(len(_SANDBOX_MERCHANTS))]
-        is_income = merchant == "Soldo Real"
-        cents = rng.randrange(1_500, 90_000) if not is_income else rng.randrange(200_000, 500_000)
-        amount = Decimal(cents) / Decimal(100)
+        merchant = _SANDBOX_MERCHANTS[rng.randrange(len(_SANDBOX_MERCHANTS))]
+        amount = Decimal(rng.randrange(1_500, 90_000)) / Decimal(100)
         transactions.append(
             PluggyTransaction(
                 transaction_id=f"{account_id}-tx-{index}",
                 description=merchant,
-                amount=amount if is_income else -amount,
-                transaction_date=today - timedelta(days=rng.randrange(0, 27)),
+                amount=-amount,
+                transaction_date=today - timedelta(days=rng.randrange(0, max_days_back + 1)),
             )
         )
     return transactions
