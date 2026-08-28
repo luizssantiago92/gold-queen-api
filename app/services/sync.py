@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, delete, select
 
 from app.core.config import get_settings
 from app.core.exceptions import ConnectionLimitError, NotFoundError
@@ -65,17 +65,21 @@ def delete_connection(session: Session, user_id: int, connection_id: int) -> Non
     if connection is None:
         raise NotFoundError("Bank connection not found.")
 
-    accounts = session.exec(
-        select(Account).where(Account.connection_id == connection.id)
-    ).all()
-
-    for account in accounts:
-        transactions = session.exec(
-            select(Transaction).where(Transaction.account_id == account.id)
+    account_ids = [
+        account.id
+        for account in session.exec(
+            select(Account).where(Account.connection_id == connection.id)
         ).all()
-        for transaction in transactions:
-            session.delete(transaction)
-        session.delete(account)
+    ]
+
+    # Issued as explicit statements, one level at a time. Queuing per-row deletes
+    # instead would let the unit of work emit them in any order, and Postgres
+    # rejects removing an account while its transactions still reference it.
+    if account_ids:
+        session.exec(
+            delete(Transaction).where(col(Transaction.account_id).in_(account_ids))
+        )
+        session.exec(delete(Account).where(col(Account.id).in_(account_ids)))
 
     session.delete(connection)
     session.commit()
