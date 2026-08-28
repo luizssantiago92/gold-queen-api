@@ -92,6 +92,24 @@ If the user already has 3 banks, step 1 returns `403` with code `connection_limi
 }
 ```
 
+### `GET /v1/dashboard/monthly-series`
+
+```json
+{
+  "reference_month": "2026-08",
+  "total_expenses": "845.10",
+  "points": [
+    { "date": "2026-08-01", "cumulative_expenses": "42.90" },
+    { "date": "2026-08-02", "cumulative_expenses": "118.35" }
+  ]
+}
+```
+
+The series is cumulative and monotonic, with one point per elapsed day of the
+month — it stops at today rather than running to the end of the month, so the
+chart never shows a flat tail into the future. `total_expenses` always equals
+the last point and matches `month_expenses` from the overview.
+
 ### `GET /v1/dashboard/transactions?page=1&limit=20`
 
 ```json
@@ -178,6 +196,7 @@ For `429`, `detail` already carries the in-persona text:
 | --- | --- |
 | `["overview"]` | `/v1/dashboard/overview` |
 | `["categories"]` | `/v1/dashboard/categories` |
+| `["monthly-series"]` | `/v1/dashboard/monthly-series` |
 | `["transactions", page]` | `/v1/dashboard/transactions` |
 | `["queen-tips"]` | `/v1/advisor/queen-tips` |
 

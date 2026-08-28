@@ -9,6 +9,8 @@ from app.schemas.dashboard import (
     BankBalance,
     CategoriesResponse,
     CategoryBreakdown,
+    MonthlySeriesPoint,
+    MonthlySeriesResponse,
     OverviewResponse,
     TransactionPage,
     TransactionResponse,
@@ -69,6 +71,23 @@ def categories(current_user: CurrentUser, session: SessionDep) -> CategoriesResp
         reference_month=date.today().strftime("%Y-%m"),
         total_expenses=total,
         categories=sorted(items, key=lambda item: item.total, reverse=True),
+    )
+
+
+@router.get("/monthly-series", response_model=MonthlySeriesResponse)
+def monthly_series(current_user: CurrentUser, session: SessionDep) -> MonthlySeriesResponse:
+    user_id: int = current_user.id  # type: ignore[assignment]
+
+    series = treasury.daily_cumulative_expenses(session, user_id)
+    total = series[-1][1] if series else treasury.ZERO
+
+    return MonthlySeriesResponse(
+        reference_month=date.today().strftime("%Y-%m"),
+        total_expenses=total,
+        points=[
+            MonthlySeriesPoint(date=day, cumulative_expenses=amount)
+            for day, amount in series
+        ],
     )
 
 

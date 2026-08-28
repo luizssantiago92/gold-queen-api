@@ -35,6 +35,17 @@ class CategoriesResponse(BaseModel):
     categories: list[CategoryBreakdown]
 
 
+class MonthlySeriesPoint(BaseModel):
+    date: date
+    cumulative_expenses: Decimal
+
+
+class MonthlySeriesResponse(BaseModel):
+    reference_month: str
+    total_expenses: Decimal
+    points: list[MonthlySeriesPoint]
+
+
 class TransactionResponse(BaseModel):
     id: int
     description: str

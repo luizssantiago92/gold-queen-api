@@ -76,6 +76,7 @@ Secrets belong only in the back-end. Never expose `PLUGGY_CLIENT_SECRET` or `GEM
 | `POST` | `/v1/connections/sync` | Sync accounts and categorize new transactions |
 | `GET` | `/v1/dashboard/overview` | Consolidated treasury, per-bank share, monthly totals |
 | `GET` | `/v1/dashboard/categories` | Current-month spending by category |
+| `GET` | `/v1/dashboard/monthly-series` | Cumulative spending, one point per elapsed day |
 | `GET` | `/v1/dashboard/transactions` | Paginated unified feed with guardrail status |
 | `GET` | `/v1/advisor/queen-tips` | Structured financial diagnosis |
 | `POST` | `/v1/chat/query` | Ask the Gold Queen (cached, rate limited) |

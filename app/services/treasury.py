@@ -103,6 +103,33 @@ def expenses_by_category(session: Session, user_id: int) -> dict[str, tuple[Deci
     return {key: (_quantize(total), count) for key, (total, count) in breakdown.items()}
 
 
+def daily_cumulative_expenses(
+    session: Session, user_id: int, reference: date | None = None
+) -> list[tuple[date, Decimal]]:
+    """Return one ``(day, cumulative_expenses)`` point per elapsed day of the month.
+
+    The series stops at the reference day instead of running to the end of the
+    month, so the chart never shows a flat tail into the future.
+    """
+    today = reference or date.today()
+    start, end = month_bounds(today)
+
+    per_day: dict[date, Decimal] = {}
+    for transaction, _ in user_transactions(session, user_id, start, end):
+        if transaction.amount >= 0:
+            continue
+        day = transaction.transaction_date
+        per_day[day] = per_day.get(day, ZERO) + -transaction.amount
+
+    series: list[tuple[date, Decimal]] = []
+    running = ZERO
+    for offset in range(today.day):
+        day = start.replace(day=offset + 1)
+        running += per_day.get(day, ZERO)
+        series.append((day, _quantize(running)))
+    return series
+
+
 def share(value: Decimal, total: Decimal) -> float:
     if total <= ZERO:
         return 0.0
