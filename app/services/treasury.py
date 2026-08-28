@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from sqlmodel import Session, select
 
+from app.core.config import get_settings
 from app.models.entities import Account, BankConnection, Transaction
 
 ZERO = Decimal("0.00")
@@ -109,10 +110,17 @@ def share(value: Decimal, total: Decimal) -> float:
 
 
 def build_ai_summary(session: Session, user_id: int) -> str:
-    """Compact treasury snapshot handed to the AI as grounding context."""
+    """Compact treasury snapshot handed to the AI as grounding context.
+
+    The product rules are included because users ask about them directly, and
+    without them the model invents plausible-sounding limits.
+    """
+    settings = get_settings()
+
     balance = total_balance(session, user_id)
     expenses, income = month_totals(session, user_id)
     categories = expenses_by_category(session, user_id)
+    connections = user_connections(session, user_id)
 
     ranked = sorted(categories.items(), key=lambda item: item[1][0], reverse=True)
     category_lines = "\n".join(
@@ -120,11 +128,21 @@ def build_ai_summary(session: Session, user_id: int) -> str:
         for category, (total, count) in ranked[:8]
     ) or "- no expenses recorded this month"
 
+    bank_lines = "\n".join(
+        f"- {connection.institution_name}" for connection in connections
+    ) or "- no banks connected yet"
+
     reference = date.today().strftime("%Y-%m")
     return (
+        "Product rules (authoritative, never contradict them):\n"
+        f"- The free plan allows up to {settings.max_bank_connections} bank connections.\n"
+        f"- The user may ask the Gold Queen {settings.chat_daily_limit} questions per day.\n"
+        "\n"
         f"Reference month: {reference}\n"
         f"Total balance across banks: R$ {balance}\n"
         f"Month income: R$ {income}\n"
         f"Month expenses: R$ {expenses}\n"
+        f"Connected banks ({len(connections)} of "
+        f"{settings.max_bank_connections}):\n{bank_lines}\n"
         f"Expenses by category:\n{category_lines}"
     )
