@@ -2,20 +2,54 @@
 
 ## Database — Supabase
 
-1. Create a project in the `luizssantiago92` organization, region `sa-east-1` (Sao Paulo).
-2. Copy the connection string from **Project Settings → Database → Connection string → URI**.
-3. Convert it to the SQLAlchemy driver form:
+The project already exists:
+
+| Field | Value |
+| --- | --- |
+| Name | `gold-queen` |
+| Project ref | `ogzmhbjadcoffaneolav` |
+| Region | `sa-east-1` (Sao Paulo) |
+| API URL | `https://ogzmhbjadcoffaneolav.supabase.co` |
+| Plan | Free (USD 0.00 / month) |
+
+The initial schema (`users`, `bank_connections`, `accounts`, `transactions`, `chat_cache`, `chat_usage`) is already applied.
+
+To point the API at it:
+
+1. Get the database password in **Project Settings → Database**. Use **Reset database password** if it was never stored.
+2. Build the connection string using the `psycopg2` driver:
 
 ```
-postgresql+psycopg2://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
+postgresql+psycopg2://postgres:<password>@db.ogzmhbjadcoffaneolav.supabase.co:5432/postgres
 ```
 
-4. Set it as `DATABASE_URL` in the API host environment.
-5. Apply the schema:
+Supabase shows the URI as `postgresql://`; the `+psycopg2` suffix is required by SQLAlchemy.
+
+3. Set it as `DATABASE_URL`, then create the demo users:
+
+```bash
+python -m app.seed
+```
+
+Future schema changes go through Alembic:
 
 ```bash
 alembic upgrade head
-python -m app.seed
+```
+
+### Row Level Security
+
+The frontend never talks to Supabase directly: it only calls this API, which connects over the direct Postgres connection string. The Supabase anon key is therefore never published, and authorization is enforced by the API through JWT.
+
+Even so, RLS should be enabled so the auto-generated PostgREST endpoints reject the anon and authenticated roles. No policies are needed, because the API connects as the table owner, which bypasses RLS.
+
+```sql
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bank_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_usage ENABLE ROW LEVEL SECURITY;
 ```
 
 ## API host
