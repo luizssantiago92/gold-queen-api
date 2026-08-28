@@ -38,6 +38,20 @@ async def create_connect_token(
     )
 
 
+@router.delete("/{connection_id}", status_code=204)
+def delete_connection(
+    connection_id: int,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> None:
+    """Unlink a bank, freeing a slot in the Free plan quota."""
+    sync_service.delete_connection(
+        session,
+        current_user.id,  # type: ignore[arg-type]
+        connection_id,
+    )
+
+
 @router.post("/sync", response_model=SyncResponse)
 async def sync_connection(
     payload: SyncRequest,

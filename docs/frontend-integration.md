@@ -54,6 +54,12 @@ sequenceDiagram
 3. On `onSuccess`, post the returned `itemId` to `POST /v1/connections/sync`.
 4. Refresh the dashboard queries.
 
+To unlink a bank, call `DELETE /v1/connections/{id}`, which answers `204` and
+removes its accounts and transactions. Offer it whenever the quota is full:
+otherwise a user who linked three banks can never swap one out. It returns `404`
+for a connection owned by someone else, so surface that as "not found" rather
+than "forbidden". Invalidate the same queries as a sync afterwards.
+
 If the user already has 3 banks, step 1 returns `403` with code `connection_limit_reached`.
 
 ## Response contracts

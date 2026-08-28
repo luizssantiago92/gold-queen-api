@@ -75,6 +75,7 @@ Secrets belong only in the back-end. Never expose `PLUGGY_CLIENT_SECRET` or `GEM
 | `GET` | `/v1/connections` | List linked banks |
 | `POST` | `/v1/connections/connect` | Issue a Pluggy Connect token (enforces the 3-bank quota) |
 | `POST` | `/v1/connections/sync` | Sync accounts and categorize new transactions |
+| `DELETE` | `/v1/connections/{id}` | Unlink a bank, erasing its data and freeing a quota slot |
 | `GET` | `/v1/dashboard/overview` | Consolidated treasury, per-bank share, monthly totals |
 | `GET` | `/v1/dashboard/categories` | Current-month spending by category |
 | `GET` | `/v1/dashboard/monthly-series` | Cumulative spending, one point per elapsed day |

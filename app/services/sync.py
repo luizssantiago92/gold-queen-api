@@ -6,7 +6,7 @@ from decimal import Decimal
 from sqlmodel import Session, select
 
 from app.core.config import get_settings
-from app.core.exceptions import ConnectionLimitError
+from app.core.exceptions import ConnectionLimitError, NotFoundError
 from app.models.entities import Account, BankConnection, Transaction
 from app.services.ai import AIEngine
 from app.services.pluggy import PluggyClient
@@ -46,6 +46,39 @@ def ensure_connection_quota(session: Session, user_id: int) -> int:
             "Remove one before linking another bank."
         )
     return used
+
+
+def delete_connection(session: Session, user_id: int, connection_id: int) -> None:
+    """Unlink a bank and erase everything derived from it.
+
+    Without this the Free plan quota is a one-way door: after three banks the
+    user can never link a fourth, even to replace one. Rows are removed
+    child-first because the schema has no cascade.
+    """
+    connection = session.exec(
+        select(BankConnection).where(
+            BankConnection.id == connection_id,
+            BankConnection.user_id == user_id,
+        )
+    ).first()
+
+    if connection is None:
+        raise NotFoundError("Bank connection not found.")
+
+    accounts = session.exec(
+        select(Account).where(Account.connection_id == connection.id)
+    ).all()
+
+    for account in accounts:
+        transactions = session.exec(
+            select(Transaction).where(Transaction.account_id == account.id)
+        ).all()
+        for transaction in transactions:
+            session.delete(transaction)
+        session.delete(account)
+
+    session.delete(connection)
+    session.commit()
 
 
 async def sync_item(
