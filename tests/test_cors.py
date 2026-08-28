@@ -9,6 +9,7 @@ both paths are asserted here.
 from fastapi.testclient import TestClient
 
 ALLOWED = "http://localhost:5173"
+PRODUCTION = "https://gold-queen-web.vercel.app"
 PREVIEW = "https://gold-queen-web-abc123-luiz.vercel.app"
 FOREIGN = "https://evil-app.vercel.app"
 
@@ -31,11 +32,13 @@ def test_listed_origin_is_allowed_on_both_paths(client: TestClient) -> None:
     assert response.headers["access-control-allow-origin"] == ALLOWED
 
 
-def test_vercel_preview_is_allowed_by_regex(client: TestClient) -> None:
-    assert _preflight(client, PREVIEW).headers["access-control-allow-origin"] == PREVIEW
+def test_vercel_domains_are_allowed_by_regex(client: TestClient) -> None:
+    # Production keeps working even if CORS_ORIGINS is missing or misconfigured.
+    for origin in (PRODUCTION, PREVIEW):
+        assert _preflight(client, origin).headers["access-control-allow-origin"] == origin
 
-    response = client.get("/health", headers={"Origin": PREVIEW})
-    assert response.headers["access-control-allow-origin"] == PREVIEW
+        response = client.get("/health", headers={"Origin": origin})
+        assert response.headers["access-control-allow-origin"] == origin
 
 
 def test_unknown_origin_is_refused(client: TestClient) -> None:

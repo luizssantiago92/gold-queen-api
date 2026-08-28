@@ -19,6 +19,7 @@ def test_trailing_slash_in_an_origin_is_ignored() -> None:
 def test_default_regex_matches_vercel_previews_but_not_other_apps() -> None:
     pattern = re.compile(Settings().allowed_origin_regex or "")
 
+    assert pattern.fullmatch("https://gold-queen-web.vercel.app")
     assert pattern.fullmatch("https://gold-queen-web-abc123-luiz.vercel.app")
     # A blanket *.vercel.app would hand the API to any app hosted on Vercel.
     assert pattern.fullmatch("https://evil-app.vercel.app") is None

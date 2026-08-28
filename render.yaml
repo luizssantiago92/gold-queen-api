@@ -34,4 +34,4 @@ services:
       # Preview deploys get a fresh hostname each time, so they are matched by
       # pattern rather than listed above.
       - key: CORS_ORIGIN_REGEX
-        value: https://gold-queen-web-[a-z0-9-]+\.vercel\.app
+        value: https://gold-queen-web(-[a-z0-9-]+)?\.vercel\.app

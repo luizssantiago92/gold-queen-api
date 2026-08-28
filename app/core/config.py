@@ -16,10 +16,11 @@ class Settings(BaseSettings):
     # Kept as a raw string: pydantic-settings would try to JSON-decode a list field
     # before any validator runs, which rejects the comma-separated form.
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
-    # Vercel gives every preview deploy its own hostname, which a fixed list can
-    # never cover. Scoped to this project's prefix on purpose: a blanket
-    # *.vercel.app would let any app hosted on Vercel call the API.
-    cors_origin_regex: str = r"https://gold-queen-web-[a-z0-9-]+\.vercel\.app"
+    # Matches the Vercel production domain plus the per-build hostname of every
+    # preview deploy, which a fixed list can never enumerate. Scoped to this
+    # project's prefix on purpose: a blanket *.vercel.app would let any app
+    # hosted on Vercel call the API with credentials.
+    cors_origin_regex: str = r"https://gold-queen-web(-[a-z0-9-]+)?\.vercel\.app"
 
     database_url: str = "sqlite:///./gold_queen.db"
 
