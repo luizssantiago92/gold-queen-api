@@ -45,15 +45,14 @@ def _live_client(
 async def test_transactions_use_the_v2_endpoint_and_follow_the_cursor(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    seen_urls: list[str] = []
-    seen_cursors: list[str | None] = []
+    seen: list[httpx.URL] = []
+    page_2 = "https://api.pluggy.ai/v2/transactions?accountId=acc-1&cursor=abc"
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/auth":
             return httpx.Response(200, json={"apiKey": "key"})
 
-        seen_urls.append(request.url.path)
-        seen_cursors.append(request.url.params.get("cursor"))
+        seen.append(request.url)
 
         if request.url.params.get("cursor") is None:
             return httpx.Response(
@@ -63,7 +62,7 @@ async def test_transactions_use_the_v2_endpoint_and_follow_the_cursor(
                         {"id": "t1", "description": "Padaria", "amount": -10.5,
                          "date": "2026-08-02T00:00:00.000Z"}
                     ],
-                    "nextCursor": "page-2",
+                    "next": page_2,
                 },
             )
         return httpx.Response(
@@ -73,15 +72,19 @@ async def test_transactions_use_the_v2_endpoint_and_follow_the_cursor(
                     {"id": "t2", "description": "Soldo", "amount": 4200,
                      "date": "2026-08-01T00:00:00.000Z"}
                 ],
-                "nextCursor": None,
+                "next": None,
             },
         )
 
     client = _live_client(monkeypatch, handler)
     transactions = await client.fetch_transactions("acc-1")
 
-    assert seen_urls == ["/v2/transactions", "/v2/transactions"]
-    assert seen_cursors == [None, "page-2"]
+    assert [url.path for url in seen] == ["/v2/transactions", "/v2/transactions"]
+    # The second call must follow the "next" URL verbatim, cursor included.
+    assert str(seen[1]) == page_2
+    # v2 rejects these outright, so they must never be sent.
+    assert "pageSize" not in seen[0].params
+    assert "limit" not in seen[0].params
 
     assert [t.transaction_id for t in transactions] == ["t1", "t2"]
     assert transactions[0].amount == Decimal("-10.5")

@@ -24,7 +24,6 @@ from app.core.exceptions import UpstreamError
 
 _API_KEY_TTL = timedelta(hours=1, minutes=45)
 
-_TRANSACTION_PAGE_SIZE = 100
 _MAX_TRANSACTION_PAGES = 50
 
 _SANDBOX_INSTITUTIONS = ("Banco Itau", "Nubank", "Bradesco")
@@ -152,24 +151,15 @@ class PluggyClient:
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             api_key = await self._authenticate(client)
-            cursor: str | None = None
+            headers = {"X-API-KEY": api_key}
+            url = f"{self._settings.pluggy_base_url}/v2/transactions"
+            # v2 accepts accountId only; it rejects pageSize and limit outright.
+            params: dict[str, Any] | None = {"accountId": account_id}
 
-            # /v2 replaced the retired /transactions endpoint and pages by cursor.
             # The bound stops a malformed cursor from looping forever; it is far
             # above what a demo account holds.
             for _ in range(_MAX_TRANSACTION_PAGES):
-                params: dict[str, Any] = {
-                    "accountId": account_id,
-                    "pageSize": _TRANSACTION_PAGE_SIZE,
-                }
-                if cursor:
-                    params["cursor"] = cursor
-
-                response = await client.get(
-                    f"{self._settings.pluggy_base_url}/v2/transactions",
-                    headers={"X-API-KEY": api_key},
-                    params=params,
-                )
+                response = await client.get(url, headers=headers, params=params)
                 if response.status_code >= 400:
                     raise UpstreamError(
                         f"Pluggy transactions fetch failed: {response.text}"
@@ -191,9 +181,12 @@ class PluggyClient:
                         )
                     )
 
-                cursor = payload.get("nextCursor")
-                if not cursor:
+                # Pagination arrives as "next": an absolute URL to the following
+                # page, already carrying the cursor, or null on the last page.
+                next_page = payload.get("next")
+                if not next_page:
                     break
+                url, params = str(next_page), None
 
         return transactions
 
