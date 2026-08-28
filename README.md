@@ -58,7 +58,8 @@ All settings come from environment variables (see [.env.example](.env.example)):
 | `PLUGGY_CLIENT_ID` / `PLUGGY_CLIENT_SECRET` | Pluggy application credentials ([dashboard.pluggy.ai](https://dashboard.pluggy.ai)). |
 | `GEMINI_API_KEY` | Google AI Studio key ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)). |
 | `GEMINI_MODEL` | Defaults to `gemini-3.6-flash`. The PRD named `gemini-1.5-flash`, which Google retired; `gemini-2.5-flash` is likewise closed to new API keys. |
-| `CORS_ORIGINS` | Comma-separated origins allowed to call the API. |
+| `CORS_ORIGINS` | Comma-separated origins allowed to call the API. A trailing slash is ignored. |
+| `CORS_ORIGIN_REGEX` | Extra origins allowed by pattern. Defaults to this project's Vercel preview hostnames; empty disables it. |
 | `MAX_BANK_CONNECTIONS` | Free plan bank connection quota (default `3`). |
 | `CHAT_DAILY_LIMIT` | Daily Gold Queen interactions per user (default `10`). |
 

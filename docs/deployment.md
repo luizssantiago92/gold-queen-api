@@ -91,13 +91,26 @@ Required environment variables in production:
 | `PLUGGY_CLIENT_ID` / `PLUGGY_CLIENT_SECRET` | Pluggy application credentials |
 | `GEMINI_API_KEY` | Google AI Studio key |
 | `CORS_ORIGINS` | The deployed frontend origin |
+| `CORS_ORIGIN_REGEX` | Optional. Defaults to this project's Vercel preview hostnames |
 | `ENVIRONMENT` | `production` |
 
 ## Frontend — Vercel
 
-`gold-queen-web` deploys to Vercel under the `luizssantiago92` team. Set `VITE_API_BASE_URL` to the Render URL, then add the Vercel domain to `CORS_ORIGINS` on the API side and redeploy the API so the new origin takes effect.
+`gold-queen-web` deploys to Vercel under the `luizssantiago92` team. Set `VITE_API_BASE_URL` to the Render URL, then add the Vercel production domain to `CORS_ORIGINS` on the API side and redeploy the API so the new origin takes effect.
 
 Order matters: deploy the API first, because the frontend bakes `VITE_API_BASE_URL` into the bundle at build time and needs the URL to already exist.
+
+### Debugging CORS
+
+A browser blocks the call whenever the response lacks `Access-Control-Allow-Origin`, and the frontend surfaces that as a generic "the API did not answer" — indistinguishable from the API being down. Check the header directly instead of guessing:
+
+```bash
+curl -sI https://gold-queen-api.onrender.com/health -H 'Origin: https://gold-queen-web.vercel.app' | grep -i access-control
+```
+
+Test the actual request as shown above, not only the `OPTIONS` preflight: Starlette answers them in separate code paths, so the preflight can succeed while the real response still omits the header.
+
+Two failure modes look identical from the outside and are worth ruling out first: a free Render instance spun down by inactivity returns `x-render-routing: no-server` with no CORS headers, and a failed deploy leaves the previous instance serving the previous environment variables.
 
 ## Post-deploy checklist
 

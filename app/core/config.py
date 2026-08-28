@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # Kept as a raw string: pydantic-settings would try to JSON-decode a list field
     # before any validator runs, which rejects the comma-separated form.
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    # Vercel gives every preview deploy its own hostname, which a fixed list can
+    # never cover. Scoped to this project's prefix on purpose: a blanket
+    # *.vercel.app would let any app hosted on Vercel call the API.
+    cors_origin_regex: str = r"https://gold-queen-web-[a-z0-9-]+\.vercel\.app"
 
     database_url: str = "sqlite:///./gold_queen.db"
 
@@ -44,7 +48,17 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        # Browsers send the Origin without a trailing slash, so a stray one in the
+        # env var would silently reject the very domain it was meant to allow.
+        return [
+            origin.strip().rstrip("/")
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
+
+    @property
+    def allowed_origin_regex(self) -> str | None:
+        return self.cors_origin_regex or None
 
     @property
     def pluggy_enabled(self) -> bool:

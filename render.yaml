@@ -28,6 +28,10 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      # Comma-separated; add the Vercel domain once the frontend is deployed.
+      # Comma-separated; add the Vercel production domain once the frontend is deployed.
       - key: CORS_ORIGINS
         sync: false
+      # Preview deploys get a fresh hostname each time, so they are matched by
+      # pattern rather than listed above.
+      - key: CORS_ORIGIN_REGEX
+        value: https://gold-queen-web-[a-z0-9-]+\.vercel\.app
