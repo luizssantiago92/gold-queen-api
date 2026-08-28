@@ -3,7 +3,9 @@
 Flow implemented here:
 1. ``POST /auth`` with CLIENT_ID/CLIENT_SECRET to obtain a 2h API key.
 2. ``POST /connect_token`` to hand a 30 min scoped token to the frontend widget.
-3. ``GET /accounts`` and ``GET /transactions`` to sync the connected item.
+3. ``GET /accounts`` and ``GET /v2/transactions`` to sync the connected item.
+   The v1 transactions endpoint was retired and now answers 410, so the newer
+   cursor-paginated one is the only option.
 
 When credentials are absent the client switches to a deterministic sandbox
 simulator so the API stays fully demoable offline (portfolio friendly).
@@ -21,6 +23,9 @@ from app.core.config import get_settings
 from app.core.exceptions import UpstreamError
 
 _API_KEY_TTL = timedelta(hours=1, minutes=45)
+
+_TRANSACTION_PAGE_SIZE = 100
+_MAX_TRANSACTION_PAGES = 50
 
 _SANDBOX_INSTITUTIONS = ("Banco Itau", "Nubank", "Bradesco")
 _SANDBOX_MERCHANTS = (
@@ -143,32 +148,54 @@ class PluggyClient:
         if not self.enabled:
             return _simulated_transactions(account_id)
 
+        transactions: list[PluggyTransaction] = []
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             api_key = await self._authenticate(client)
-            response = await client.get(
-                f"{self._settings.pluggy_base_url}/transactions",
-                headers={"X-API-KEY": api_key},
-                params={"accountId": account_id, "pageSize": 100},
-            )
-            if response.status_code >= 400:
-                raise UpstreamError(f"Pluggy transactions fetch failed: {response.text}")
+            cursor: str | None = None
 
-            transactions: list[PluggyTransaction] = []
-            for item in response.json().get("results", []):
-                raw_date = str(item.get("date", ""))[:10]
-                try:
-                    parsed_date = date.fromisoformat(raw_date)
-                except ValueError:
-                    parsed_date = date.today()
-                transactions.append(
-                    PluggyTransaction(
-                        transaction_id=item["id"],
-                        description=item.get("description") or "Transaction",
-                        amount=Decimal(str(item.get("amount", 0))),
-                        transaction_date=parsed_date,
-                    )
+            # /v2 replaced the retired /transactions endpoint and pages by cursor.
+            # The bound stops a malformed cursor from looping forever; it is far
+            # above what a demo account holds.
+            for _ in range(_MAX_TRANSACTION_PAGES):
+                params: dict[str, Any] = {
+                    "accountId": account_id,
+                    "pageSize": _TRANSACTION_PAGE_SIZE,
+                }
+                if cursor:
+                    params["cursor"] = cursor
+
+                response = await client.get(
+                    f"{self._settings.pluggy_base_url}/v2/transactions",
+                    headers={"X-API-KEY": api_key},
+                    params=params,
                 )
-            return transactions
+                if response.status_code >= 400:
+                    raise UpstreamError(
+                        f"Pluggy transactions fetch failed: {response.text}"
+                    )
+
+                payload = response.json()
+                for item in payload.get("results", []):
+                    raw_date = str(item.get("date", ""))[:10]
+                    try:
+                        parsed_date = date.fromisoformat(raw_date)
+                    except ValueError:
+                        parsed_date = date.today()
+                    transactions.append(
+                        PluggyTransaction(
+                            transaction_id=item["id"],
+                            description=item.get("description") or "Transaction",
+                            amount=Decimal(str(item.get("amount", 0))),
+                            transaction_date=parsed_date,
+                        )
+                    )
+
+                cursor = payload.get("nextCursor")
+                if not cursor:
+                    break
+
+        return transactions
 
 
 def _seed_for(value: str) -> int:
