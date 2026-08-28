@@ -1,0 +1,77 @@
+# Project guardrails config (optional). Copy to .specs/config.yaml and edit.
+# Or run: npx @luizsantiago/spec-guardrails init-config --preset node-ts
+# Injected into phase procedures via phase-context.
+
+schema: spec-driven
+
+# Extend a built-in preset (default | node-ts | python):
+# extends: node-ts
+
+context: |
+  Tech stack: (fill in)
+  Test command: npm test
+  Branch prefix: feat
+
+rules:
+  specify:
+    - Prefer EARS acceptance criteria
+    - Mark unknowns with [NEEDS CLARIFICATION: question]
+  tasks:
+    - Every REQ must appear in the Test Coverage Matrix
+  verify:
+    - Evidence must cite test file:line paths
+
+# Execution policy (optional — soft enforcement via CLI + skills)
+budget:
+  max_iterations: 5
+  max_agent_runs: 12
+  max_retries_per_task: 3
+
+scope:
+  allowed_paths: []
+  denied_paths:
+    - "**/.env"
+    - "**/secrets/**"
+    - "**/production/**"
+
+escalation:
+  on_scope_expansion: human
+  on_budget_exhaustion: stop
+  on_policy_violation: block
+
+# Intent/effect rules (optional — pair with check-path --op read|write|delete)
+effects:
+  deny_delete:
+    - "**/.git/**"
+  deny_write: []
+  deny_read: []
+  warn_write: []
+  warn_read: []
+  warn_delete: []
+
+# Memory retrieval (optional — hybrid FTS + graph + semantic)
+memory:
+  lifecycle:
+    retention_days: 90
+    auto_archive_on_handoff: false
+  retrieval:
+    semantic: false
+    provider: none
+    model: text-embedding-3-small
+    max_chunks: 20
+    fts_weight: 0.6
+    semantic_weight: 0.4
+    graph_depth: 1
+
+# Soft OS sandbox (optional — policy, not containers)
+sandbox:
+  mode: warn
+  deny_patterns:
+    - "rm\\s+-rf"
+    - "curl.*\\|.*sh"
+
+# Project-specific overrides (appended on top of preset + rules above):
+# overrides:
+#   rules:
+#     verify:
+#       - Also run playwright e2e before PASS

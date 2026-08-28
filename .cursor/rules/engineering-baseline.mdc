@@ -1,0 +1,58 @@
+---
+description: Engineering baseline and guardrails map for this repository
+alwaysApply: true
+---
+
+# Engineering Baseline
+
+- Follow existing codebase conventions before introducing new patterns.
+- Run tests and linters before considering work done.
+- Never commit secrets, API keys, or credentials.
+- Prefer small, focused diffs over large refactors.
+- Touch only the files the current task requires; park out-of-scope ideas in `.specs/STATE.md`.
+- Apply secure coding practices from `.cursor/skills/engineering-standards.md`.
+- Run the security checklist from `.cursor/skills/security-review.md` during `/verify`.
+
+# Artifact Language
+
+All project artifacts are written in English: source code, tests, comments, commit messages, PR titles and descriptions, `.specs/` documents, and identifier names.
+
+Chat language is a personal preference. Set it in your own agent settings if you want replies in another language.
+
+# Guardrails Skills
+
+<!-- guardrails-managed:skills-map:start -->
+| Skill | Purpose |
+| --- | --- |
+| `.cursor/skills/agent-architecture.md` | SDD hub — contract, phases, gates, complexity router |
+| `.cursor/skills/references/` | Phase procedures (explore, project-init, constitution, specify, discuss, design, tasks, analyze, implement, validate, converge, archive, memory, quick-mode, context-limits, lessons, sub-agents) |
+| `.cursor/skills/task-graph-engineering.md` | Task DAG, parallelism, verify topology |
+| `.cursor/skills/engineering-standards.md` | Code quality, secure coding, git hygiene |
+| `.cursor/skills/security-review.md` | Security checklist for verification |
+| `.cursor/skills/appsec.md` | Application security sister (load on demand) |
+| `.cursor/skills/qa-strategy.md` | QA strategy sister (load on demand) |
+| `.cursor/skills/code-simplify.md` | Simplification sister (load on demand) |
+| `.cursor/skills/ship-ready.md` | Ship-ready sister (load on demand) |
+| `.cursor/skills/git-handoff.md` | Git sync and session handoff |
+<!-- guardrails-managed:skills-map:end -->
+
+# Deterministic Gates
+
+<!-- guardrails-managed:gates-map:start -->
+Gates live in `.specs/guardrails/scripts/` (Python 3). **The agent runs them** at phase boundaries — see `agent-architecture.md`.
+
+| You run (human) | When |
+| --- | --- |
+| `install` | Once (or after upgrading the package) |
+| `feature-init "…"` | Optional — or ask the agent to `/specify` |
+| `project-init` | Optional — brownfield repo with existing code |
+| `doctor` | Install looks broken |
+| `workspace-list <feature>` | Inspect parallel worktrees before cleanup |
+| `execution-policy status` | Check budgets and scope before expanding Execute |
+
+Everything else (`validate-spec`, `validate-tasks`, `check-commit`, `workspace-prepare`, `execution-policy check-path`, …) is normally run **by the agent**, not memorized from this file. Full list: `npx @luizsantiago/spec-guardrails --help` or `.specs/GETTING_STARTED.md`.
+
+Non-zero gate exit = STOP. Without Python, the agent performs the same checks manually.
+
+**Git tiers:** Tier 0 (branch, local commits, `.specs/`) is automatic after you approve spec/tasks. Push, PR, merge, and deploy need owner go-ahead. See `git-handoff.md`.
+<!-- guardrails-managed:gates-map:end -->
