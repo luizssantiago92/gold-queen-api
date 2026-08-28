@@ -7,6 +7,7 @@ is flagged ``is_guarded=False`` so the UI can show it was not AI-audited.
 """
 
 import logging
+import time
 from decimal import Decimal
 
 from app.core.ai_guardrails import (
@@ -18,6 +19,18 @@ from app.core.ai_guardrails import (
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+_MAX_ATTEMPTS = 3
+_RETRY_BACKOFF_SECONDS = 1.5
+
+# Gemini returns 503 when the flash tier is briefly saturated and 429 when the
+# free quota is throttled; both clear on their own, unlike a bad key or model.
+_TRANSIENT_MARKERS = ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "500", "INTERNAL")
+
+
+def _is_transient(error: Exception) -> bool:
+    message = str(error).upper()
+    return any(marker in message for marker in _TRANSIENT_MARKERS)
 
 QUEEN_PERSONA = (
     "You are the Gold Queen, Master of Coin and Sovereign of the Realm. "
@@ -55,12 +68,30 @@ class AIEngine:
         from google.genai import types
 
         client = genai.Client(api_key=self._settings.gemini_api_key)
-        response = client.models.generate_content(
-            model=self._settings.gemini_model,
-            contents=prompt,
-            config=types.GenerateContentConfig(system_instruction=system_instruction),
-        )
-        return response.text or ""
+        config = types.GenerateContentConfig(system_instruction=system_instruction)
+
+        last_error: Exception | None = None
+        for attempt in range(_MAX_ATTEMPTS):
+            try:
+                response = client.models.generate_content(
+                    model=self._settings.gemini_model,
+                    contents=prompt,
+                    config=config,
+                )
+                return response.text or ""
+            except Exception as exc:  # noqa: BLE001 - retried below when transient
+                last_error = exc
+                if not _is_transient(exc) or attempt == _MAX_ATTEMPTS - 1:
+                    raise
+                logger.info(
+                    "Transient AI error, retrying (%s/%s): %s",
+                    attempt + 1,
+                    _MAX_ATTEMPTS,
+                    exc,
+                )
+                time.sleep(_RETRY_BACKOFF_SECONDS * (attempt + 1))
+
+        raise last_error  # type: ignore[misc]
 
     def categorize(self, transactions: list[tuple[str, str, Decimal]]) -> tuple[dict[str, str], bool]:
         """Categorize ``(id, description, amount)`` tuples.

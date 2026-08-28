@@ -28,7 +28,9 @@ class Settings(BaseSettings):
     pluggy_base_url: str = "https://api.pluggy.ai"
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-1.5-flash"
+    # The PRD specified gemini-1.5-flash, which Google has since retired; 2.5-flash
+    # is also closed to new API keys. 3.6-flash is the current flash tier.
+    gemini_model: str = "gemini-3.6-flash"
 
     max_bank_connections: int = 3
     chat_daily_limit: int = 10

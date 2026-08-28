@@ -9,7 +9,7 @@ The Gold Queen API is the back-end engine that links banks through Open Finance 
 - Python 3.11+ / FastAPI (async)
 - SQLModel (SQLAlchemy + Pydantic v2) / PostgreSQL / Alembic
 - Pluggy Sandbox API for Open Finance
-- Google GenAI SDK (`gemini-1.5-flash`)
+- Google GenAI SDK (`gemini-3.6-flash`)
 - Runtime AI guardrails (strict Pydantic schema validation)
 - JWT authentication (python-jose + passlib/bcrypt)
 
@@ -57,6 +57,7 @@ All settings come from environment variables (see [.env.example](.env.example)):
 | `JWT_SECRET` | Signing key for access tokens. Use a long random string. |
 | `PLUGGY_CLIENT_ID` / `PLUGGY_CLIENT_SECRET` | Pluggy application credentials ([dashboard.pluggy.ai](https://dashboard.pluggy.ai)). |
 | `GEMINI_API_KEY` | Google AI Studio key ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)). |
+| `GEMINI_MODEL` | Defaults to `gemini-3.6-flash`. The PRD named `gemini-1.5-flash`, which Google retired; `gemini-2.5-flash` is likewise closed to new API keys. |
 | `CORS_ORIGINS` | Comma-separated origins allowed to call the API. |
 | `MAX_BANK_CONNECTIONS` | Free plan bank connection quota (default `3`). |
 | `CHAT_DAILY_LIMIT` | Daily Gold Queen interactions per user (default `10`). |
