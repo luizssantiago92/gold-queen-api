@@ -17,13 +17,20 @@ The initial schema (`users`, `bank_connections`, `accounts`, `transactions`, `ch
 To point the API at it:
 
 1. Get the database password in **Project Settings → Database**. Use **Reset database password** if it was never stored.
-2. Build the connection string using the `psycopg2` driver:
+2. Build the connection string using the **Session Pooler** host and the `psycopg2` driver:
 
 ```
-postgresql+psycopg2://postgres:<password>@db.ogzmhbjadcoffaneolav.supabase.co:5432/postgres
+postgresql+psycopg2://postgres.ogzmhbjadcoffaneolav:<password>@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
 ```
 
-Supabase shows the URI as `postgresql://`; the `+psycopg2` suffix is required by SQLAlchemy.
+Two details that differ from what the Supabase dashboard shows by default:
+
+- Supabase prints the URI as `postgresql://`; SQLAlchemy needs the `+psycopg2` suffix.
+- The pooler user is `postgres.<project-ref>`, not plain `postgres`.
+
+**Use the pooler, not the direct host.** `db.ogzmhbjadcoffaneolav.supabase.co` publishes only an `AAAA` record, so it is reachable over IPv6 only and fails on IPv4-only networks (most corporate ones). The pooler host resolves to IPv4 `A` records.
+
+On Windows the failure is easy to misread: psycopg2 tries to decode the server error message using the local code page and raises `UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe3` instead of the real connection error. If you see that, suspect connectivity, not credentials.
 
 3. Set it as `DATABASE_URL`, then create the demo users:
 
