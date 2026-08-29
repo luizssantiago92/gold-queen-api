@@ -156,17 +156,29 @@ class AIEngine:
             logger.warning("Queen tips guardrail fallback: %s", exc)
             return _fallback_tips(summary), False
 
-    def chat(self, question: str, summary: str) -> str:
+    def chat(self, question: str, summary: str) -> tuple[str, bool]:
+        """Answer as the Queen, reporting whether the answer is a stable one.
+
+        False means the model was expected to reply and did not. Such an answer
+        must not be cached or charged: the fallback is generic, and keeping it
+        would outlive the outage that produced it.
+
+        Running without a key is not a failure but a supported offline mode, so
+        its deterministic reply counts as stable.
+        """
         if not self.enabled:
-            return _fallback_chat(question)
+            return _fallback_chat(question), True
 
         prompt = f"Treasury context:\n{summary}\n\nSubject's question: {question}"
         try:
             answer = self._generate(prompt, QUEEN_PERSONA).strip()
-            return answer or _fallback_chat(question)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Chat fallback: %s", exc)
-            return _fallback_chat(question)
+            return _fallback_chat(question), False
+
+        if not answer:
+            return _fallback_chat(question), False
+        return answer, True
 
 
 def _fallback_categories(transactions: list[tuple[str, str, Decimal]]) -> dict[str, str]:

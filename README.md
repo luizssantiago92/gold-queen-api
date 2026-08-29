@@ -61,7 +61,7 @@ All settings come from environment variables (see [.env.example](.env.example)):
 | `CORS_ORIGINS` | Comma-separated origins allowed to call the API. A trailing slash is ignored. |
 | `CORS_ORIGIN_REGEX` | Extra origins allowed by pattern. Defaults to this project's Vercel preview hostnames; empty disables it. |
 | `MAX_BANK_CONNECTIONS` | Free plan bank connection quota (default `3`). |
-| `CHAT_DAILY_LIMIT` | Daily Gold Queen interactions per user (default `10`). |
+| `CHAT_DAILY_LIMIT` | Daily Gold Queen interactions per user (default `5`, sized for Gemini's free tier of 20 generations per day across the project). |
 
 Secrets belong only in the back-end. Never expose `PLUGGY_CLIENT_SECRET` or `GEMINI_API_KEY` to the browser.
 

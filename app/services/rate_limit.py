@@ -38,6 +38,25 @@ def remaining_requests(session: Session, user_id: int) -> int:
     return max(limit - usage.request_count, 0)
 
 
+def refund_request(session: Session, user_id: int) -> int:
+    """Give a consumed interaction back when the model never answered.
+
+    The quota is charged before calling the model so a burst cannot slip through,
+    which means an upstream outage would otherwise cost the user a question and
+    return nothing but the generic fallback.
+    """
+    limit = get_settings().chat_daily_limit
+    usage = _get_or_create_usage(session, user_id, date.today())
+
+    if usage.request_count > 0:
+        usage.request_count -= 1
+        session.add(usage)
+        session.commit()
+        session.refresh(usage)
+
+    return max(limit - usage.request_count, 0)
+
+
 def consume_request(session: Session, user_id: int) -> int:
     """Consume one daily interaction or raise ``RateLimitError``."""
     limit = get_settings().chat_daily_limit

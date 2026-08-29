@@ -50,18 +50,24 @@ def query(
 
     remaining = rate_limit.consume_request(session, user_id)
     summary = treasury.build_ai_summary(session, user_id)
-    answer = ai.chat(payload.question, summary)
+    answer, answered = ai.chat(payload.question, summary)
 
-    session.add(
-        ChatCache(
-            user_id=user_id,
-            question_hash=question_hash,
-            question=payload.question,
-            answer=answer,
-            usage_date=today,
+    # Caching the fallback would keep serving a generic reply for the rest of the
+    # day, long after the model recovered, so an outage costs neither the cache
+    # slot nor one of the user's daily questions.
+    if answered:
+        session.add(
+            ChatCache(
+                user_id=user_id,
+                question_hash=question_hash,
+                question=payload.question,
+                answer=answer,
+                usage_date=today,
+            )
         )
-    )
-    session.commit()
+        session.commit()
+    else:
+        remaining = rate_limit.refund_request(session, user_id)
 
     return ChatResponse(
         answer=answer,

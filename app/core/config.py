@@ -38,7 +38,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.6-flash"
 
     max_bank_connections: int = 3
-    chat_daily_limit: int = 10
+    # Gemini's free tier caps the whole project at 20 generations per day, shared
+    # with Queen's Tips and transaction categorization. A higher figure here would
+    # only promise questions the upstream quota cannot serve.
+    chat_daily_limit: int = 5
 
     @field_validator("database_url", mode="before")
     @classmethod

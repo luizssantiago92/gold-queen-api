@@ -1,8 +1,10 @@
 """Queen's Tips and Master of Coin chatbot tests (RF04, RF05)."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.services.ai import AIEngine
 
 
 def test_queen_tips_returns_three_sections(auth_client: TestClient) -> None:
@@ -53,6 +55,27 @@ def test_daily_quota_returns_themed_429(auth_client: TestClient) -> None:
     assert blocked.status_code == 429
     assert blocked.json()["code"] == "rate_limit_reached"
     assert "Rainha" in blocked.json()["detail"]
+
+
+def test_a_failed_model_call_is_neither_cached_nor_charged(
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An upstream outage must not cost a question nor stick around all day."""
+    def broken(self: AIEngine, question: str, summary: str) -> tuple[str, bool]:
+        return "A magia dos oraculos esta indisponivel.", False
+
+    monkeypatch.setattr(AIEngine, "chat", broken)
+
+    question = {"question": "Quanto gastei com banquetes?"}
+    before = auth_client.post("/v1/chat/query", json=question).json()
+    assert before["remaining_requests"] == get_settings().chat_daily_limit
+
+    monkeypatch.undo()
+
+    # The outage answer must not be served from cache once the model recovers.
+    after = auth_client.post("/v1/chat/query", json=question).json()
+    assert after["from_cache"] is False
+    assert after["answer"] != before["answer"]
 
 
 def test_health_endpoint(client: TestClient) -> None:
