@@ -13,7 +13,7 @@ When planning architecture, specs, or multi-step features, read the hub first:
 Deterministic gates (`python3`, non-zero exit means STOP):
 
 - Scripts in `.specs/guardrails/scripts/` — the **agent** runs them at phase boundaries (see hub).
-- Humans: `install` once; optional `feature-init`, `project-init`, `doctor`, `classify-change`, `feature-status`.
+- Humans: `install` once; optional `feature-init`, `project-init`, `doctor`, `classify-change`, `feature-status`, `feature-overview`.
 - Full CLI: `npx @luizsantiago/spec-guardrails --help`
 - Onboarding: `.specs/GETTING_STARTED.md`
 
@@ -22,4 +22,3 @@ Persistent state: `.specs/STATE.md`, `.specs/lessons.json`, `.specs/LESSONS.md`.
 GitHub Copilot reads this file as repository custom instructions.
 Cursor and Claude Code use their own adapter entry files — see Platform-parity.md in the package repo.
 <!-- SPEC-GUARDRAILS:END -->
-

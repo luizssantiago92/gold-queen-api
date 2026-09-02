@@ -13,7 +13,7 @@ When planning architecture, specs, or multi-step features, read the hub first:
 Deterministic gates (`python3`, non-zero exit means STOP):
 
 - Scripts in `.specs/guardrails/scripts/` — the **agent** runs them at phase boundaries (see hub).
-- Humans: `install` once; optional `feature-init`, `project-init`, `doctor`, `classify-change`, `feature-status`.
+- Humans: `install` once; optional `feature-init`, `project-init`, `doctor`, `classify-change`, `feature-status`, `feature-overview`.
 - Full CLI: `npx @luizsantiago/spec-guardrails --help`
 - Onboarding: `.specs/GETTING_STARTED.md`
 
@@ -22,4 +22,3 @@ Persistent state: `.specs/STATE.md`, `.specs/lessons.json`, `.specs/LESSONS.md`.
 OpenAI Codex adapter — skills under `.codex/skills/`.
 Root `AGENTS.md` and other platform files may also be present — use the tree your Codex session loads.
 <!-- SPEC-GUARDRAILS:END -->
-

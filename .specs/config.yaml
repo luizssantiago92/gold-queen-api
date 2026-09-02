@@ -10,8 +10,6 @@ context: |
 
 # Cursor IDE hooks are opt-in and stay disabled for this project.
 # Reinstalling the package must not re-register .cursor/hooks.json entries.
-cursor:
-  hooks: false
 
 rules:
   specify:

@@ -13,7 +13,7 @@ When planning architecture, specs, or multi-step features, read the hub first:
 Deterministic gates (`python3`, non-zero exit means STOP):
 
 - Scripts in `.specs/guardrails/scripts/` — the **agent** runs them at phase boundaries (see hub).
-- Humans: `install` once; optional `feature-init`, `project-init`, `doctor`, `classify-change`, `feature-status`.
+- Humans: `install` once; optional `feature-init`, `project-init`, `doctor`, `classify-change`, `feature-status`, `feature-overview`.
 - Full CLI: `npx @luizsantiago/spec-guardrails --help`
 - Onboarding: `.specs/GETTING_STARTED.md`
 
@@ -21,4 +21,3 @@ All project artifacts are written in English.
 Persistent state: `.specs/STATE.md`, `.specs/lessons.json`, `.specs/LESSONS.md`.
 Cursor users also get `.cursorrules` + `.cursor/rules/engineering-baseline.mdc` — same contract, different entrypoint. See Platform-parity docs in the package repo.
 <!-- SPEC-GUARDRAILS:END -->
-

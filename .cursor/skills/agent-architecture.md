@@ -41,30 +41,35 @@ Structural gates run **before** owner review, so they cannot drift when the mode
 | When | Command |
 | --- | --- |
 | Before `/specify` (Medium+) | `npx @luizsantiago/spec-guardrails feature-init "<description>"` (Tier 0) |
-| Optional elicitation (vague kickoff or request) | `/elicit` → `req-analysis init` — **suggested only**, never blocks Specify |
+| Optional elicitation (vague kickoff or request) | `/elicit` → `req-analysis init` — **suggested only**; `require_brief*` config may block `validate-spec` on Complex |
 | Optional project config | `init-config --preset node-ts` or `install --preset python` (see `preset list`) |
 | Before confirming a spec | `python3 .specs/guardrails/scripts/validate_spec.py [feature]` |
+| Before Tasks (Complex / Medium+ design) | `python3 .specs/guardrails/scripts/validate_design.py [feature]` |
 | Before approving tasks | `python3 .specs/guardrails/scripts/analyze_artifacts.py [feature]` |
 | Before presenting tasks for approval | `python3 .specs/guardrails/scripts/validate_tasks.py [feature]` |
 | Before Execute waves (3+ tasks) | `npx @luizsantiago/spec-guardrails loop-plan [feature]` |
 | Parallel wave (2+ tasks, disjoint Files) | `npx @luizsantiago/spec-guardrails workspace-prepare [feature] --tasks T1,T2` |
 | After parallel wave merge | `npx @luizsantiago/spec-guardrails workspace-cleanup [feature] --force` |
-| Before editing paths outside task Files | `npx @luizsantiago/spec-guardrails context-guard check-edit <path> [--op write]` — **Cursor:** optional auto-run via hooks when `cursor.hooks: true` (see below) |
+| Before editing paths outside task Files | `npx @luizsantiago/spec-guardrails context-guard check-edit <path> [--op write]` |
 | Before claiming feature complete | `npx @luizsantiago/spec-guardrails context-guard check-complete [feature]` |
 | Session episodic note | `npx @luizsantiago/spec-guardrails episodes record --summary "…"` |
 | Brownfield code lookup | `npx @luizsantiago/spec-guardrails code-index rebuild` · `code-index search "…"` |
-| Shell safety check | `npx @luizsantiago/spec-guardrails sandbox check-command "<cmd>"` — **Cursor:** optional auto-run via hooks when enabled |
+| Shell safety check | `npx @luizsantiago/spec-guardrails sandbox check-command "<cmd>"` |
 | Solution exploration (explicit) | `npx @luizsantiago/spec-guardrails solution-explore init <feature> --candidates A,B` |
 | Before exploration decision | `npx @luizsantiago/spec-guardrails solution-explore validate [feature]` |
 | Retrieve related context | `npx @luizsantiago/spec-guardrails memory-retrieve "<query>"` |
 | Rebuild / embed memory index | `npx @luizsantiago/spec-guardrails memory-index rebuild` · `memory-index embed` |
 | On gate retry (Execute playbook) | `npx @luizsantiago/spec-guardrails execution-policy record-retry Tn` |
-| On each commit | `python3 .specs/guardrails/scripts/check_commit.py --message "<message>"` |
+| On each commit | `python3 .specs/guardrails/scripts/check_commit.py --message "<message>"` · `check_commit.py --staged` |
+| Before each commit (staged diff) | `python3 .specs/guardrails/scripts/check_suppressions.py` |
+| During Verify, when `quality.checks` is configured | `python3 .specs/guardrails/scripts/run_quality_checks.py` |
 | Before declaring a feature done | `python3 .specs/guardrails/scripts/validate_state.py [feature]` |
 | Traceability (Medium+ features) | `python3 .specs/guardrails/scripts/validate_traceability.py [feature]` |
+| Ship / AI Surface (when infra or AI paths in tasks) | `python3 .specs/guardrails/scripts/validate_ship_surface.py [feature]` |
 | Quick mode evidence | `python3 .specs/guardrails/scripts/validate_quick.py [feature]` |
 | After Verify PASS | `npx @luizsantiago/spec-guardrails archive-feature [feature]` (Tier 0) |
 | Before a phase procedure (optional) | `npx @luizsantiago/spec-guardrails phase-context <phase>` |
+| Feature dashboard (human-readable) | `npx @luizsantiago/spec-guardrails feature-overview [feature] [--write]` |
 | After a FAIL verdict | `python3 .specs/guardrails/scripts/lessons.py add --source .specs/features/[feature]/validation.md` |
 
 Gates accept a feature name, a feature directory, or a path to the artifact. With no argument they auto-detect when the project has exactly one feature; with several they list candidates and exit 2. A spec is rejected unless every criterion uses `SHALL` or `MUST` and `## Assumptions` is present.
@@ -72,17 +77,6 @@ Gates accept a feature name, a feature directory, or a path to the artifact. Wit
 A **non-zero exit means STOP** — fix the artifact, then re-run the gate. Never continue past a failing gate.
 
 **Process mode (Brakes off).** If Python 3.10+ or shell execution is unavailable, say so once, then perform the same checks by reading the artifact against the reference checklist. Process mode never lowers the standard; it only changes who runs the check. Run `doctor` to see separate **Process** and **Brakes** scores.
-
-## Cursor IDE hooks (optional — off by default)
-
-Shipped hooks auto-run `context-guard check-edit` and `sandbox check-command` on Cursor. **They are not installed unless the owner opts in** — the core loop and CLI checks work the same without them.
-
-| Owner says | Action |
-| --- | --- |
-| Enable Cursor hooks | `npx @luizsantiago/spec-guardrails install --with-cursor-hooks` |
-| Disable Cursor hooks | `npx @luizsantiago/spec-guardrails install --without-cursor-hooks` |
-
-`/elicit` may ask once on Cursor during the first requirements round. Recommend **off** on low-RAM machines (each edit/shell spawns Node). Details: repository doc [Cursor hooks and sandbox](https://github.com/luizssantiago92/spec-guardrails/blob/main/docs/guide/Cursor-hooks-and-sandbox.md).
 
 ## Phase Map
 
@@ -93,19 +87,19 @@ EXPLORE (optional) → ELICIT (optional) → SPECIFY → DISCUSS (conditional) �
 | Phase | Required | Reference | Sister skill | Gate |
 | --- | --- | --- | --- | --- |
 | **Explore** | Optional | `references/explore.md` | — | — |
-| **Elicit** | Optional | `references/elicitation.md` | `validate-req-analysis` | — (before `/specify`; suggest-only entry) |
+| **Elicit** | Optional | `references/elicitation.md` | — | `validate_req_analysis.py` (before `/specify`; suggest-only entry) |
 | **Constitution** | Once per project | `references/constitution.md` | — | — |
 | **Specify** | Yes | `references/specify.md` | — | `validate_spec.py` |
 | **Discuss** | Conditional | `references/discuss.md` | — | — |
-| **Design** | No | `references/design.md` | — | — |
+| **Design** | No | `references/design.md` | — | `validate_design.py` (when design.md exists, Medium+) |
 | **Tasks** | No | `references/tasks.md` | `task-graph-engineering.md` | `validate_tasks.py` |
 | **Analyze** | Before task approval | `references/analyze.md` | — | `analyze_artifacts.py` |
-| **Execute** | Yes | `references/implement.md` | `engineering-standards.md` | `check_commit.py` |
-| **Verify** | Yes | `references/validate.md` | `security-review.md` | `validate_state.py` |
+| **Execute** | Yes | `references/implement.md` | `engineering-standards.md` | `check_commit.py`, `check_suppressions.py` |
+| **Verify** | Yes | `references/validate.md` | `security-review.md` | `validate_traceability.py`, `validate_ship_surface.py`, `validate_state.py`, `run_quality_checks.py` |
 | **Archive** | After Verify PASS | `references/archive.md` | `git-handoff.md` | `archive-feature` |
 | **Converge** | On drift | `references/converge.md` | — | `analyze_artifacts.py` |
 | **Handoff** | Yes | `references/memory.md` | `git-handoff.md` | — |
-| **Quick** | Alternative | `references/quick-mode.md` | — | `check_commit.py`, `validate_quick.py` |
+| **Quick** | Alternative | `references/quick-mode.md` | — | `check_commit.py`, `check_suppressions.py`, `validate_quick.py` |
 | **Context** | Always | `references/context-limits.md` | — | — |
 | **Sub-agents** | When batched | `references/sub-agents.md` | `task-graph-engineering.md` | — |
 | **Solution exploration** | Explicit fork | `references/solution-exploration.md` | — | `solution-explore validate` |
@@ -121,8 +115,10 @@ Not in the default phase-map cell. Load only on `/verify` after `validate.md` + 
 | --- | --- | --- |
 | `appsec.md` | **Complex**, or auth / payments / PII / secrets / upload / SSRF / network trust boundary | Quick; Simple without those surfaces; copy/docs/styling |
 | `qa-strategy.md` | **Complex**, or multi-step user-facing flow, or owner asked for regression/QA | Quick; Simple one-file; evidence-or-zero alone is enough |
+| `python-devops.md` | Infra/docker/terraform/helm/CI paths in tasks, or `python-platform` preset | No deploy surface in the change |
+| `ai-engineering.md` | LLM/RAG/MCP/agent/prompt paths or classify-change AI signal | No AI paths in tasks |
 
-**Sequence.** If both triggers fire: AppSec → write `## AppSec` → **drop** `appsec.md` from the working set → QA → write `## QA`. Never load both together. Neither section is enforced by `validate_state.py` (verifier judgment).
+**Sequence.** If both AppSec and QA triggers fire: AppSec → write `## AppSec` → **drop** `appsec.md` → QA → write `## QA`. Never load AppSec + QA together. For platform work, `python-devops.md` and `ai-engineering.md` are independent of Verify sisters — load at most one on-demand sister during Design/Tasks/Execute when paths match; never with AppSec/QA in the same window.
 
 ## Complexity Router
 
@@ -130,7 +126,7 @@ Complexity determines depth. Do not run every phase on every change.
 
 | Tier | Scope | Path |
 | --- | --- | --- |
-| **Quick** | ≤3 files, no design decisions, no new dependencies | `references/quick-mode.md` — describe, implement, verify, commit; gates: `check_commit.py` + `validate-quick` |
+| **Quick** | ≤3 files, no design decisions, no new dependencies | `references/quick-mode.md` — describe, implement, verify, commit; gates: `check_commit.py`, `check_suppressions.py`, `validate-quick` |
 | **Simple** | 2–5 files, localized change | Specify → Execute → Verify |
 | **Medium** | New feature, <10 tasks | Specify → Tasks → Execute → Verify |
 | **Complex** | New architecture, API surface, infra | Specify → Discuss → Design → Tasks → Execute → Verify |
@@ -140,7 +136,7 @@ Complexity determines depth. Do not run every phase on every change.
 
 **Rules**
 
-- **Specify and Verify are always required on the full pipeline** — you must know WHAT was asked and prove it was delivered. **Quick** is the exception: the express lane in `references/quick-mode.md` (describe → implement → verify → commit) with `check_commit.py` on each commit and `validate-quick` as the close/evidence gate.
+- **Specify and Verify are always required on the full pipeline** — you must know WHAT was asked and prove it was delivered. **Quick** is the exception: the express lane in `references/quick-mode.md` (describe → implement → verify → commit) with `check_commit.py`, `check_suppressions.py` on each commit, and `validate-quick` as the close/evidence gate.
 - **Design is skipped** when there are no architectural decisions and no new patterns.
 - **Tasks is skipped** when there are ≤3 obvious steps.
 - **Discuss is triggered inside Specify** when the feature touches persistence, external calls, auth, payments, concurrency, or state transitions, or when the owner's intent is ambiguous.
