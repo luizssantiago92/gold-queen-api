@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 
 from app.core.config import get_settings
 from app.models.entities import Account, BankConnection, Transaction
+from app.services.display_category import classify_display
 
 ZERO = Decimal("0.00")
 
@@ -42,14 +43,14 @@ def user_accounts(session: Session, user_id: int) -> list[tuple[Account, BankCon
     return [(account, connection) for account, connection in rows]
 
 
-def user_transactions(
+def user_transaction_rows(
     session: Session,
     user_id: int,
     start: date | None = None,
     end: date | None = None,
-) -> list[tuple[Transaction, BankConnection]]:
+) -> list[tuple[Transaction, Account, BankConnection]]:
     statement = (
-        select(Transaction, BankConnection)
+        select(Transaction, Account, BankConnection)
         .join(Account, Transaction.account_id == Account.id)  # type: ignore[arg-type]
         .join(BankConnection, Account.connection_id == BankConnection.id)  # type: ignore[arg-type]
         .where(BankConnection.user_id == user_id)
@@ -60,7 +61,43 @@ def user_transactions(
         statement = statement.where(Transaction.transaction_date < end)
 
     rows = session.exec(statement.order_by(Transaction.transaction_date.desc())).all()  # type: ignore[attr-defined]
-    return [(transaction, connection) for transaction, connection in rows]
+    return [(transaction, account, connection) for transaction, account, connection in rows]
+
+
+def user_transactions(
+    session: Session,
+    user_id: int,
+    start: date | None = None,
+    end: date | None = None,
+) -> list[tuple[Transaction, BankConnection]]:
+    return [
+        (transaction, connection)
+        for transaction, _, connection in user_transaction_rows(session, user_id, start, end)
+    ]
+
+
+def display_category_for(
+    transaction: Transaction,
+    account: Account,
+) -> str:
+    return classify_display(
+        transaction.description,
+        transaction.amount,
+        account_type=account.account_type,
+        ai_category=transaction.category,
+    )
+
+
+def get_transaction_for_user(
+    session: Session,
+    user_id: int,
+    transaction_id: int,
+) -> tuple[Transaction, Account, BankConnection] | None:
+    for row in user_transaction_rows(session, user_id):
+        transaction, account, connection = row
+        if transaction.id == transaction_id:
+            return row
+    return None
 
 
 def total_balance(session: Session, user_id: int) -> Decimal:
@@ -92,14 +129,15 @@ def month_totals(session: Session, user_id: int) -> tuple[Decimal, Decimal]:
 
 
 def expenses_by_category(session: Session, user_id: int) -> dict[str, tuple[Decimal, int]]:
-    """Return ``category -> (total_expense, transaction_count)`` for this month."""
+    """Return ``display_category -> (total_expense, transaction_count)`` for this month."""
     start, end = month_bounds()
     breakdown: dict[str, tuple[Decimal, int]] = {}
-    for transaction, _ in user_transactions(session, user_id, start, end):
+    for transaction, account, _ in user_transaction_rows(session, user_id, start, end):
         if transaction.amount >= 0:
             continue
-        total, count = breakdown.get(transaction.category, (ZERO, 0))
-        breakdown[transaction.category] = (total + -transaction.amount, count + 1)
+        label = display_category_for(transaction, account)
+        total, count = breakdown.get(label, (ZERO, 0))
+        breakdown[label] = (total + -transaction.amount, count + 1)
     return {key: (_quantize(total), count) for key, (total, count) in breakdown.items()}
 
 

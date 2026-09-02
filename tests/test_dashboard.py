@@ -103,3 +103,17 @@ def test_transactions_second_page_differs(auth_client: TestClient) -> None:
     ids_one = {item["id"] for item in page_one["items"]}
     ids_two = {item["id"] for item in page_two["items"]}
     assert not ids_one & ids_two
+
+
+def test_transaction_detail_returns_extended_fields(auth_client: TestClient) -> None:
+    auth_client.post("/v1/connections/sync", json={"item_id": "item-alpha"})
+
+    listing = auth_client.get("/v1/dashboard/transactions?page=1&limit=1").json()
+    transaction_id = listing["items"][0]["id"]
+
+    body = auth_client.get(f"/v1/dashboard/transactions/{transaction_id}").json()
+    assert body["id"] == transaction_id
+    assert body["display_category"]
+    assert body["account_name"]
+    assert body["account_type"]
+    assert body["created_at"]

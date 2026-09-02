@@ -1,6 +1,6 @@
 """Dashboard payloads (RF03)."""
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
@@ -52,8 +52,15 @@ class TransactionResponse(BaseModel):
     amount: Decimal
     transaction_date: date
     category: str
+    display_category: str
     is_guarded: bool
     institution_name: str
+    account_name: str
+
+
+class TransactionDetailResponse(TransactionResponse):
+    account_type: str
+    created_at: datetime
 
 
 class TransactionPage(BaseModel):

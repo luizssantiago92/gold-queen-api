@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import CurrentUser, SessionDep
 from app.schemas.dashboard import (
@@ -12,17 +12,43 @@ from app.schemas.dashboard import (
     MonthlySeriesPoint,
     MonthlySeriesResponse,
     OverviewResponse,
+    TransactionDetailResponse,
     TransactionPage,
     TransactionResponse,
 )
+from app.models.entities import Account, BankConnection, Transaction
 from app.services import treasury
+from app.services.demo_refresh import maybe_refresh_demo
 
 router = APIRouter(prefix="/v1/dashboard", tags=["dashboard"])
+
+
+def _refresh_demo_if_needed(session: SessionDep, current_user: CurrentUser) -> None:
+    maybe_refresh_demo(session, current_user.email, current_user.id)  # type: ignore[arg-type]
+
+
+def _transaction_response(
+    transaction: Transaction,
+    account: Account,
+    connection: BankConnection,
+) -> TransactionResponse:
+    return TransactionResponse(
+        id=transaction.id,  # type: ignore[arg-type]
+        description=transaction.description,
+        amount=transaction.amount,
+        transaction_date=transaction.transaction_date,
+        category=transaction.category,
+        display_category=treasury.display_category_for(transaction, account),
+        is_guarded=transaction.is_guarded,
+        institution_name=connection.institution_name,
+        account_name=account.name,
+    )
 
 
 @router.get("/overview", response_model=OverviewResponse)
 def overview(current_user: CurrentUser, session: SessionDep) -> OverviewResponse:
     user_id: int = current_user.id  # type: ignore[assignment]
+    _refresh_demo_if_needed(session, current_user)
 
     balances = treasury.balance_by_connection(session, user_id)
     total = treasury.total_balance(session, user_id)
@@ -53,6 +79,7 @@ def overview(current_user: CurrentUser, session: SessionDep) -> OverviewResponse
 @router.get("/categories", response_model=CategoriesResponse)
 def categories(current_user: CurrentUser, session: SessionDep) -> CategoriesResponse:
     user_id: int = current_user.id  # type: ignore[assignment]
+    _refresh_demo_if_needed(session, current_user)
 
     breakdown = treasury.expenses_by_category(session, user_id)
     total = sum((value for value, _ in breakdown.values()), treasury.ZERO)
@@ -77,6 +104,7 @@ def categories(current_user: CurrentUser, session: SessionDep) -> CategoriesResp
 @router.get("/monthly-series", response_model=MonthlySeriesResponse)
 def monthly_series(current_user: CurrentUser, session: SessionDep) -> MonthlySeriesResponse:
     user_id: int = current_user.id  # type: ignore[assignment]
+    _refresh_demo_if_needed(session, current_user)
 
     series = treasury.daily_cumulative_expenses(session, user_id)
     total = series[-1][1] if series else treasury.ZERO
@@ -99,25 +127,41 @@ def transactions(
     limit: int = Query(default=20, ge=1, le=100),
 ) -> TransactionPage:
     user_id: int = current_user.id  # type: ignore[assignment]
+    _refresh_demo_if_needed(session, current_user)
 
-    rows = treasury.user_transactions(session, user_id)
-    start = (page - 1) * limit
-    window = rows[start : start + limit]
+    start, end = treasury.month_bounds()
+    rows = treasury.user_transaction_rows(session, user_id, start, end)
+    start_index = (page - 1) * limit
+    window = rows[start_index : start_index + limit]
 
     return TransactionPage(
         items=[
-            TransactionResponse(
-                id=transaction.id,  # type: ignore[arg-type]
-                description=transaction.description,
-                amount=transaction.amount,
-                transaction_date=transaction.transaction_date,
-                category=transaction.category,
-                is_guarded=transaction.is_guarded,
-                institution_name=connection.institution_name,
-            )
-            for transaction, connection in window
+            _transaction_response(transaction, account, connection)
+            for transaction, account, connection in window
         ],
         page=page,
         limit=limit,
         total=len(rows),
+    )
+
+
+@router.get("/transactions/{transaction_id}", response_model=TransactionDetailResponse)
+def transaction_detail(
+    transaction_id: int,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> TransactionDetailResponse:
+    user_id: int = current_user.id  # type: ignore[assignment]
+    _refresh_demo_if_needed(session, current_user)
+
+    row = treasury.get_transaction_for_user(session, user_id, transaction_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+
+    transaction, account, connection = row
+    base = _transaction_response(transaction, account, connection)
+    return TransactionDetailResponse(
+        **base.model_dump(),
+        account_type=account.account_type,
+        created_at=transaction.created_at,
     )
