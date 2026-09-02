@@ -118,6 +118,8 @@ the last point and matches `month_expenses` from the overview.
 
 ### `GET /v1/dashboard/transactions?page=1&limit=20`
 
+Returns **current-month** transactions only, newest first.
+
 ```json
 {
   "items": [
@@ -127,8 +129,10 @@ the last point and matches `month_expenses` from the overview.
       "amount": "-42.90",
       "transaction_date": "2026-08-24",
       "category": "Food",
+      "display_category": "Food",
       "is_guarded": true,
-      "institution_name": "Nubank"
+      "institution_name": "Pluggy Bank",
+      "account_name": "Pluggy Bank Checking"
     }
   ],
   "page": 1,
@@ -137,9 +141,20 @@ the last point and matches `month_expenses` from the overview.
 }
 ```
 
-Render the golden `ShieldCheck` icon only when `is_guarded` is `true`.
+`display_category` is the portfolio-friendly bucket shown in charts (Subscriptions, Bills, CreditCard, etc.). `category` is the raw AI vocabulary.
 
-Amounts are decimal strings: negative means expense, positive means income. Parse with a decimal-safe helper rather than `parseFloat` for display math.
+### `GET /v1/dashboard/transactions/{transaction_id}`
+
+Same fields as a list item, plus:
+
+```json
+{
+  "account_type": "BANK",
+  "created_at": "2026-08-24T12:00:00Z"
+}
+```
+
+Returns `404` when the transaction does not belong to the authenticated user.
 
 ### `GET /v1/advisor/queen-tips`
 
@@ -169,12 +184,14 @@ Response:
 {
   "answer": "...",
   "from_cache": false,
-  "remaining_requests": 7,
-  "daily_limit": 10
+  "remaining_requests": 4,
+  "daily_limit": 5
 }
 ```
 
 Use `remaining_requests` to display the remaining audiences with the Queen.
+
+**Shared quota:** `GET /v1/advisor/queen-tips` also consumes this daily limit (default `5`). Opening Queen's Tips after several chat messages may leave fewer requests for chat, and vice versa.
 
 ## Error handling
 
@@ -204,6 +221,7 @@ For `429`, `detail` already carries the in-persona text:
 | `["categories"]` | `/v1/dashboard/categories` |
 | `["monthly-series"]` | `/v1/dashboard/monthly-series` |
 | `["transactions", page]` | `/v1/dashboard/transactions` |
+| `["transaction", id]` | `/v1/dashboard/transactions/{id}` |
 | `["queen-tips"]` | `/v1/advisor/queen-tips` |
 
 Invalidate all of them after a successful `POST /v1/connections/sync`.
