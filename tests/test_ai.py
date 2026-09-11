@@ -2,12 +2,14 @@
 
 from decimal import Decimal
 
-from app.services.ai import _is_transient, get_ai_engine
+from app.providers.base import ProviderError
+from app.services.ai import _fallback_chat, _is_transient, get_ai_engine
 
 
 def test_transient_errors_are_detected() -> None:
     assert _is_transient(Exception("503 UNAVAILABLE. model is busy"))
     assert _is_transient(Exception("429 RESOURCE_EXHAUSTED"))
+    assert _is_transient(ProviderError("timeout", timed_out=True))
 
 
 def test_permanent_errors_are_not_retried() -> None:
@@ -36,3 +38,10 @@ def test_fallback_categorization_is_never_guarded() -> None:
 
 def test_empty_batch_is_a_noop() -> None:
     assert get_ai_engine().categorize([]) == ({}, False)
+
+
+def test_fallback_chat_respects_locale() -> None:
+    en = _fallback_chat("How do I save?", "en")
+    pt = _fallback_chat("Como poupo?", "pt")
+    assert "Noble subject" in en
+    assert "Nobre subdito" in pt

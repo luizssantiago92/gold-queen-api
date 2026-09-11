@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.models.entities import ChatCache
 from app.schemas.advisor import ChatRequest, ChatResponse
 from app.services import rate_limit, treasury
+from app.services.chat_scope import is_chat_in_scope, off_topic_reply
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
 
@@ -48,9 +49,17 @@ def query(
             daily_limit=settings.chat_daily_limit,
         )
 
-    remaining = rate_limit.consume_request(session, user_id)
+    if not is_chat_in_scope(payload.question):
+        return ChatResponse(
+            answer=off_topic_reply(payload.locale),
+            from_cache=False,
+            remaining_requests=rate_limit.remaining_requests(session, user_id),
+            daily_limit=settings.chat_daily_limit,
+        )
+
+    remaining = rate_limit.consume_request(session, user_id, payload.locale)
     summary = treasury.build_ai_summary(session, user_id)
-    answer, answered = ai.chat(payload.question, summary)
+    answer, answered = ai.chat(payload.question, summary, payload.locale)
 
     # Caching the fallback would keep serving a generic reply for the rest of the
     # day, long after the model recovered, so an outage costs neither the cache
