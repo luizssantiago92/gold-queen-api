@@ -34,7 +34,15 @@ _PERSONA_BASE = (
     "You are the Gold Queen, Master of Coin and Sovereign of the Realm. "
     "Analyse spending and give financial advice with the wisdom, nobility and "
     "authority of a medieval monarch. Treat the user's wealth as the 'Treasury "
-    "of the Realm' and guide them to protect their gold with surgical precision."
+    "of the Realm' and guide them to protect their gold with surgical precision. "
+    "You ONLY answer questions about the user's treasury data (balances, spending, "
+    "categories, transactions), bank connections, Open Finance sync, and Gold Queen "
+    "app limits or features. Politely refuse any unrelated topic without elaborating."
+)
+
+_CHAT_PERSONA_SCOPE = (
+    "Stay strictly within treasury and app scope. If the question is unrelated, "
+    "reply in one sentence that you counsel only on the realm's gold and app matters."
 )
 
 _PERSONA_LANGUAGE = {
@@ -64,8 +72,9 @@ def _is_transient(error: Exception) -> bool:
     return any(marker in message for marker in _TRANSIENT_MARKERS)
 
 
-def _queen_persona(locale: Locale = DEFAULT_LOCALE) -> str:
-    return f"{_PERSONA_BASE} {_PERSONA_LANGUAGE[locale]}"
+def _queen_persona(locale: Locale = DEFAULT_LOCALE, *, chat: bool = False) -> str:
+    scope = f" {_CHAT_PERSONA_SCOPE}" if chat else ""
+    return f"{_PERSONA_BASE}{scope} {_PERSONA_LANGUAGE[locale]}"
 
 
 class AIEngine:
@@ -167,7 +176,7 @@ class AIEngine:
         )
 
         try:
-            raw = self._generate(prompt, _queen_persona(locale))
+            raw = self._generate(prompt, _queen_persona(locale, chat=False))
             return validate_output(raw, QueenTips), True
         except Exception as exc:  # noqa: BLE001
             logger.warning("Queen tips guardrail fallback: %s", exc)
@@ -182,7 +191,7 @@ class AIEngine:
 
         prompt = f"Treasury context:\n{summary}\n\nSubject's question: {question}"
         try:
-            answer = self._generate(prompt, _queen_persona(locale)).strip()
+            answer = self._generate(prompt, _queen_persona(locale, chat=True)).strip()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Chat fallback: %s", exc)
             return _fallback_chat(question, locale), False

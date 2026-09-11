@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.models.entities import ChatCache
 from app.schemas.advisor import ChatRequest, ChatResponse
 from app.services import rate_limit, treasury
+from app.services.chat_scope import is_chat_in_scope, off_topic_reply
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
 
@@ -44,6 +45,14 @@ def query(
         return ChatResponse(
             answer=cached.answer,
             from_cache=True,
+            remaining_requests=rate_limit.remaining_requests(session, user_id),
+            daily_limit=settings.chat_daily_limit,
+        )
+
+    if not is_chat_in_scope(payload.question):
+        return ChatResponse(
+            answer=off_topic_reply(payload.locale),
+            from_cache=False,
             remaining_requests=rate_limit.remaining_requests(session, user_id),
             daily_limit=settings.chat_daily_limit,
         )

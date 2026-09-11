@@ -46,13 +46,13 @@ def test_daily_quota_returns_themed_429(auth_client: TestClient) -> None:
     for index in range(limit):
         response = auth_client.post(
             "/v1/chat/query",
-            json={"question": f"Question number {index}", "locale": "en"},
+            json={"question": f"How should I manage my gold this week {index}?", "locale": "en"},
         )
         assert response.status_code == 200
 
     blocked = auth_client.post(
         "/v1/chat/query",
-        json={"question": "One more question", "locale": "en"},
+        json={"question": "One more question about my treasury", "locale": "en"},
     )
     assert blocked.status_code == 429
     assert blocked.json()["code"] == "rate_limit_reached"
@@ -65,12 +65,12 @@ def test_daily_quota_portuguese_message(auth_client: TestClient) -> None:
     for index in range(limit):
         auth_client.post(
             "/v1/chat/query",
-            json={"question": f"Pergunta numero {index}", "locale": "pt"},
+            json={"question": f"Como protejo meu ouro esta semana {index}?", "locale": "pt"},
         )
 
     blocked = auth_client.post(
         "/v1/chat/query",
-        json={"question": "Uma pergunta a mais", "locale": "pt"},
+        json={"question": "Mais uma pergunta sobre meu tesouro", "locale": "pt"},
     )
     assert blocked.status_code == 429
     assert "Rainha" in blocked.json()["detail"]
