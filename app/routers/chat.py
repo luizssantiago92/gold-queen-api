@@ -48,9 +48,9 @@ def query(
             daily_limit=settings.chat_daily_limit,
         )
 
-    remaining = rate_limit.consume_request(session, user_id)
+    remaining = rate_limit.consume_request(session, user_id, payload.locale)
     summary = treasury.build_ai_summary(session, user_id)
-    answer, answered = ai.chat(payload.question, summary)
+    answer, answered = ai.chat(payload.question, summary, payload.locale)
 
     # Caching the fallback would keep serving a generic reply for the rest of the
     # day, long after the model recovered, so an outage costs neither the cache

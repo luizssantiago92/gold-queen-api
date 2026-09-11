@@ -10,12 +10,19 @@ from sqlmodel import Session, select
 
 from app.core.config import get_settings
 from app.core.exceptions import RateLimitError
+from app.core.locale import DEFAULT_LOCALE, Locale
 from app.models.entities import ChatUsage
 
-QUEEN_QUOTA_MESSAGE = (
-    "A Rainha precisa recolher-se aos seus aposentos para balancear o tesouro real. "
-    "Retorne em 24 horas para novos conselhos sobre o seu ouro."
-)
+QUEEN_QUOTA_MESSAGES: dict[Locale, str] = {
+    "en": (
+        "The Queen must retire to her chambers to balance the royal treasury. "
+        "Return in 24 hours for new counsel about your gold."
+    ),
+    "pt": (
+        "A Rainha precisa recolher-se aos seus aposentos para balancear o tesouro real. "
+        "Retorne em 24 horas para novos conselhos sobre o seu ouro."
+    ),
+}
 
 
 def _get_or_create_usage(session: Session, user_id: int, usage_date: date) -> ChatUsage:
@@ -39,12 +46,7 @@ def remaining_requests(session: Session, user_id: int) -> int:
 
 
 def refund_request(session: Session, user_id: int) -> int:
-    """Give a consumed interaction back when the model never answered.
-
-    The quota is charged before calling the model so a burst cannot slip through,
-    which means an upstream outage would otherwise cost the user a question and
-    return nothing but the generic fallback.
-    """
+    """Give a consumed interaction back when the model never answered."""
     limit = get_settings().chat_daily_limit
     usage = _get_or_create_usage(session, user_id, date.today())
 
@@ -57,13 +59,15 @@ def refund_request(session: Session, user_id: int) -> int:
     return max(limit - usage.request_count, 0)
 
 
-def consume_request(session: Session, user_id: int) -> int:
+def consume_request(
+    session: Session, user_id: int, locale: Locale = DEFAULT_LOCALE
+) -> int:
     """Consume one daily interaction or raise ``RateLimitError``."""
     limit = get_settings().chat_daily_limit
     usage = _get_or_create_usage(session, user_id, date.today())
 
     if usage.request_count >= limit:
-        raise RateLimitError(QUEEN_QUOTA_MESSAGE)
+        raise RateLimitError(QUEEN_QUOTA_MESSAGES[locale])
 
     usage.request_count += 1
     session.add(usage)

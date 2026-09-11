@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, Field
 
+from app.core.locale import DEFAULT_LOCALE, Locale
+
 
 class QueenTipsResponse(BaseModel):
     critical_expense: str
@@ -13,6 +15,7 @@ class QueenTipsResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str = Field(min_length=3, max_length=500)
+    locale: Locale = DEFAULT_LOCALE
 
 
 class ChatResponse(BaseModel):

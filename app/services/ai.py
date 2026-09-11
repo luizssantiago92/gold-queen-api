@@ -1,4 +1,4 @@
-"""Gold Queen AI engine (Google Gemini) with mandatory output guardrails.
+"""Gold Queen AI engine (Gemini via provider adapter) with mandatory output guardrails.
 
 Every call goes through ``app.core.ai_guardrails``: the model answer is parsed
 and validated against a strict schema. If validation fails, or no API key is
@@ -17,6 +17,9 @@ from app.core.ai_guardrails import (
     validate_output,
 )
 from app.core.config import get_settings
+from app.core.locale import DEFAULT_LOCALE, Locale
+from app.providers.base import Provider, ProviderError
+from app.providers.gemini import GeminiProvider
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +30,17 @@ _RETRY_BACKOFF_SECONDS = 1.5
 # free quota is throttled; both clear on their own, unlike a bad key or model.
 _TRANSIENT_MARKERS = ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "500", "INTERNAL")
 
-
-def _is_transient(error: Exception) -> bool:
-    message = str(error).upper()
-    return any(marker in message for marker in _TRANSIENT_MARKERS)
-
-QUEEN_PERSONA = (
+_PERSONA_BASE = (
     "You are the Gold Queen, Master of Coin and Sovereign of the Realm. "
     "Analyse spending and give financial advice with the wisdom, nobility and "
     "authority of a medieval monarch. Treat the user's wealth as the 'Treasury "
-    "of the Realm' and guide them to protect their gold with surgical precision. "
-    "Always answer in Brazilian Portuguese, in at most 4 sentences."
+    "of the Realm' and guide them to protect their gold with surgical precision."
 )
+
+_PERSONA_LANGUAGE = {
+    "en": "Always answer in English, in at most 4 sentences.",
+    "pt": "Always answer in Brazilian Portuguese, in at most 4 sentences.",
+}
 
 # Deterministic keyword map used when the AI is unavailable or violates the schema.
 _KEYWORD_CATEGORIES: tuple[tuple[tuple[str, ...], str], ...] = (
@@ -55,30 +57,46 @@ _KEYWORD_CATEGORIES: tuple[tuple[tuple[str, ...], str], ...] = (
 )
 
 
+def _is_transient(error: Exception) -> bool:
+    if isinstance(error, ProviderError):
+        return error.is_retryable
+    message = str(error).upper()
+    return any(marker in message for marker in _TRANSIENT_MARKERS)
+
+
+def _queen_persona(locale: Locale = DEFAULT_LOCALE) -> str:
+    return f"{_PERSONA_BASE} {_PERSONA_LANGUAGE[locale]}"
+
+
 class AIEngine:
-    def __init__(self) -> None:
+    def __init__(self, provider: Provider | None = None) -> None:
         self._settings = get_settings()
+        self._provider = provider
 
     @property
     def enabled(self) -> bool:
         return self._settings.gemini_enabled
 
-    def _generate(self, prompt: str, system_instruction: str) -> str:
-        from google import genai
-        from google.genai import types
+    def _get_provider(self) -> Provider:
+        if self._provider is not None:
+            return self._provider
+        return GeminiProvider(
+            api_key=self._settings.gemini_api_key,
+            model=self._settings.gemini_model,
+        )
 
-        client = genai.Client(api_key=self._settings.gemini_api_key)
-        config = types.GenerateContentConfig(system_instruction=system_instruction)
+    def _generate(self, prompt: str, system_instruction: str) -> str:
+        provider = self._get_provider()
+        messages = [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": prompt},
+        ]
 
         last_error: Exception | None = None
         for attempt in range(_MAX_ATTEMPTS):
             try:
-                response = client.models.generate_content(
-                    model=self._settings.gemini_model,
-                    contents=prompt,
-                    config=config,
-                )
-                return response.text or ""
+                completion = provider.complete(messages, temperature=0.2, max_tokens=None)
+                return completion.content or ""
             except Exception as exc:  # noqa: BLE001 - retried below when transient
                 last_error = exc
                 if not _is_transient(exc) or attempt == _MAX_ATTEMPTS - 1:
@@ -130,7 +148,6 @@ class AIEngine:
             if result.transaction_id in known_ids
         }
 
-        # Partial answers still get a deterministic completion, but lose the guarded flag.
         if len(mapping) != len(transactions):
             fallback = _fallback_categories(transactions)
             fallback.update(mapping)
@@ -138,9 +155,9 @@ class AIEngine:
 
         return mapping, True
 
-    def queen_tips(self, summary: str) -> tuple[QueenTips, bool]:
+    def queen_tips(self, summary: str, locale: Locale = DEFAULT_LOCALE) -> tuple[QueenTips, bool]:
         if not self.enabled:
-            return _fallback_tips(summary), False
+            return _fallback_tips(locale), False
 
         prompt = (
             "Given the treasury summary below, produce a financial diagnosis.\n"
@@ -150,35 +167,44 @@ class AIEngine:
         )
 
         try:
-            raw = self._generate(prompt, QUEEN_PERSONA)
+            raw = self._generate(prompt, _queen_persona(locale))
             return validate_output(raw, QueenTips), True
         except Exception as exc:  # noqa: BLE001
             logger.warning("Queen tips guardrail fallback: %s", exc)
-            return _fallback_tips(summary), False
+            return _fallback_tips(locale), False
 
-    def chat(self, question: str, summary: str) -> tuple[str, bool]:
-        """Answer as the Queen, reporting whether the answer is a stable one.
-
-        False means the model was expected to reply and did not. Such an answer
-        must not be cached or charged: the fallback is generic, and keeping it
-        would outlive the outage that produced it.
-
-        Running without a key is not a failure but a supported offline mode, so
-        its deterministic reply counts as stable.
-        """
+    def chat(
+        self, question: str, summary: str, locale: Locale = DEFAULT_LOCALE
+    ) -> tuple[str, bool]:
+        """Answer as the Queen, reporting whether the answer is a stable one."""
         if not self.enabled:
-            return _fallback_chat(question), True
+            return _fallback_chat(question, locale), True
 
         prompt = f"Treasury context:\n{summary}\n\nSubject's question: {question}"
         try:
-            answer = self._generate(prompt, QUEEN_PERSONA).strip()
+            answer = self._generate(prompt, _queen_persona(locale)).strip()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Chat fallback: %s", exc)
-            return _fallback_chat(question), False
+            return _fallback_chat(question, locale), False
 
         if not answer:
-            return _fallback_chat(question), False
+            return _fallback_chat(question, locale), False
         return answer, True
+
+    def provider_healthy(self) -> bool:
+        if not self.enabled:
+            return False
+        try:
+            if self._provider is not None:
+                return self._provider.health()
+            probe = GeminiProvider(
+                api_key=self._settings.gemini_api_key,
+                model=self._settings.gemini_model,
+                timeout_seconds=3.0,
+            )
+            return probe.health()
+        except Exception:  # noqa: BLE001
+            return False
 
 
 def _fallback_categories(transactions: list[tuple[str, str, Decimal]]) -> dict[str, str]:
@@ -194,29 +220,51 @@ def _fallback_categories(transactions: list[tuple[str, str, Decimal]]) -> dict[s
     return mapping
 
 
-def _fallback_tips(summary: str) -> QueenTips:
+def _fallback_tips(locale: Locale) -> QueenTips:
+    if locale == "pt":
+        return QueenTips(
+            critical_expense=(
+                "Os pergaminhos do tesouro ainda nao revelam um vazamento dominante. "
+                "Observai as despesas recorrentes do mes."
+            ),
+            management_status=(
+                "A gestao do vosso ouro segue estavel, porem sem vigilancia constante "
+                "nenhum reino prospera."
+            ),
+            smart_guidance=(
+                "Separai ao menos um decimo de cada moeda recebida para o cofre real "
+                "antes de honrar qualquer outra despesa."
+            ),
+        )
     return QueenTips(
         critical_expense=(
-            "Os pergaminhos do tesouro ainda nao revelam um vazamento dominante. "
-            "Observai as despesas recorrentes do mes."
+            "The treasury scrolls do not yet reveal a dominant leak. "
+            "Watch recurring expenses this month."
         ),
         management_status=(
-            "A gestao do vosso ouro segue estavel, porem sem vigilancia constante "
-            "nenhum reino prospera."
+            "Your gold is steady, yet no realm prospers without constant vigilance."
         ),
         smart_guidance=(
-            "Separai ao menos um decimo de cada moeda recebida para o cofre real "
-            "antes de honrar qualquer outra despesa."
+            "Set aside at least one tenth of every coin received for the royal vault "
+            "before honoring any other expense."
         ),
     )
 
 
-def _fallback_chat(question: str) -> str:
+def _fallback_chat(question: str, locale: Locale) -> str:
+    trimmed = question.strip()[:80]
+    if locale == "pt":
+        return (
+            "Nobre subdito, os conselheiros do reino estao em concilio e a magia dos "
+            "oraculos encontra-se temporariamente indisponivel. Enquanto aguardais, "
+            "lembrai-vos: gastai menos do que arrecadais e o vosso tesouro jamais mingua. "
+            f"Retornai em breve para tratarmos de '{trimmed}'."
+        )
     return (
-        "Nobre subdito, os conselheiros do reino estao em concilio e a magia dos "
-        "oraculos encontra-se temporariamente indisponivel. Enquanto aguardais, "
-        "lembrai-vos: gastai menos do que arrecadais e o vosso tesouro jamais mingua. "
-        f"Retornai em breve para tratarmos de '{question.strip()[:80]}'."
+        "Noble subject, the royal counsellors are in council and the oracle magic is "
+        "temporarily unavailable. Until then, remember: spend less than you earn and "
+        "your treasury shall never dwindle. "
+        f"Return soon so we may discuss '{trimmed}'."
     )
 
 

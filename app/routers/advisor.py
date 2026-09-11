@@ -3,10 +3,11 @@
 import hashlib
 from datetime import date
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header, Query
 from sqlmodel import select
 
 from app.api.deps import AIDep, CurrentUser, SessionDep
+from app.core.locale import DEFAULT_LOCALE, Locale, parse_accept_language, parse_locale
 from app.models.entities import ChatCache
 from app.schemas.advisor import QueenTipsResponse
 from app.services import rate_limit, treasury
@@ -18,8 +19,13 @@ _TIPS_CACHE_KEY = "queen-tips"
 
 @router.get("/queen-tips", response_model=QueenTipsResponse)
 def queen_tips(
-    current_user: CurrentUser, session: SessionDep, ai: AIDep
+    current_user: CurrentUser,
+    session: SessionDep,
+    ai: AIDep,
+    locale: Locale = Query(DEFAULT_LOCALE),
+    accept_language: str | None = Header(default=None, alias="Accept-Language"),
 ) -> QueenTipsResponse:
+    resolved_locale = parse_locale(locale) if locale else parse_accept_language(accept_language)
     """Return today's diagnosis, reusing the cached one to spend zero extra tokens."""
     user_id: int = current_user.id  # type: ignore[assignment]
     summary = treasury.build_ai_summary(session, user_id)
@@ -48,8 +54,8 @@ def queen_tips(
             from_cache=True,
         )
 
-    rate_limit.consume_request(session, user_id)
-    tips, guarded = ai.queen_tips(summary)
+    rate_limit.consume_request(session, user_id, resolved_locale)
+    tips, guarded = ai.queen_tips(summary, resolved_locale)
 
     if guarded:
         session.add(

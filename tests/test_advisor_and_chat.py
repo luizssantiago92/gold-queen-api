@@ -45,15 +45,34 @@ def test_daily_quota_returns_themed_429(auth_client: TestClient) -> None:
 
     for index in range(limit):
         response = auth_client.post(
-            "/v1/chat/query", json={"question": f"Pergunta numero {index}"}
+            "/v1/chat/query",
+            json={"question": f"Question number {index}", "locale": "en"},
         )
         assert response.status_code == 200
 
     blocked = auth_client.post(
-        "/v1/chat/query", json={"question": "Uma pergunta a mais"}
+        "/v1/chat/query",
+        json={"question": "One more question", "locale": "en"},
     )
     assert blocked.status_code == 429
     assert blocked.json()["code"] == "rate_limit_reached"
+    assert "Queen" in blocked.json()["detail"]
+
+
+def test_daily_quota_portuguese_message(auth_client: TestClient) -> None:
+    limit = get_settings().chat_daily_limit
+
+    for index in range(limit):
+        auth_client.post(
+            "/v1/chat/query",
+            json={"question": f"Pergunta numero {index}", "locale": "pt"},
+        )
+
+    blocked = auth_client.post(
+        "/v1/chat/query",
+        json={"question": "Uma pergunta a mais", "locale": "pt"},
+    )
+    assert blocked.status_code == 429
     assert "Rainha" in blocked.json()["detail"]
 
 
@@ -61,7 +80,9 @@ def test_a_failed_model_call_is_neither_cached_nor_charged(
     auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An upstream outage must not cost a question nor stick around all day."""
-    def broken(self: AIEngine, question: str, summary: str) -> tuple[str, bool]:
+    def broken(
+        self: AIEngine, question: str, summary: str, locale: str = "en"
+    ) -> tuple[str, bool]:
         return "A magia dos oraculos esta indisponivel.", False
 
     monkeypatch.setattr(AIEngine, "chat", broken)
@@ -81,3 +102,4 @@ def test_a_failed_model_call_is_neither_cached_nor_charged(
 def test_health_endpoint(client: TestClient) -> None:
     body = client.get("/health").json()
     assert body["status"] == "ok"
+    assert body["ai_provider"] in {"offline", "ok", "degraded"}
