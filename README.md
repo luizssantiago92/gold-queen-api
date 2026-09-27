@@ -152,10 +152,10 @@ On failure, a deterministic fallback is used and affected records carry `is_guar
 ```bash
 pytest
 ruff check app tests
-pip-audit
+pip-audit -r requirements-dev.txt
 ```
 
-CI runs on every push to `main` (`.github/workflows/ci.yml`) and fails if `pip-audit` reports a known vulnerability in the installed environment.
+CI runs on every push to `main` (`.github/workflows/ci.yml`) and fails if `pip-audit` reports a known vulnerability in the project requirements. The audit is scoped to those files so packages preinstalled on the runner are not treated as dependencies.
 
 ## Project process
 

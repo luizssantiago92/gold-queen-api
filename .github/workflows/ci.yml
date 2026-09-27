@@ -28,7 +28,10 @@ jobs:
         run: ruff check app tests
 
       - name: Audit dependencies
-        run: pip-audit
+        # Audit the project requirements only. A bare `pip-audit` also scans
+        # packages preinstalled on the runner (such as setuptools), which are
+        # not dependencies of this API.
+        run: pip-audit -r requirements-dev.txt
 
       - name: Test
         env:
