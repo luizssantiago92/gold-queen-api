@@ -1,11 +1,12 @@
 """Authentication endpoints backed by JWT."""
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import get_settings
 from app.core.exceptions import AuthenticationError, ConflictError
+from app.core.login_rate_limit import enforce_login_rate_limit
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.entities import User
 from app.schemas.auth import (
@@ -36,7 +37,8 @@ def register(payload: RegisterRequest, session: SessionDep) -> User:
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, session: SessionDep) -> TokenResponse:
+def login(payload: LoginRequest, session: SessionDep, request: Request) -> TokenResponse:
+    enforce_login_rate_limit(request)
     user = session.exec(select(User).where(User.email == payload.email)).first()
     if user is None or not verify_password(payload.password, user.password_hash):
         raise AuthenticationError("Invalid email or password.")

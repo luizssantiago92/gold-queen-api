@@ -1,6 +1,37 @@
 """Authentication flow tests."""
 
+from datetime import UTC, datetime, timedelta
+
+import jwt
+import pytest
 from fastapi.testclient import TestClient
+from starlette.requests import Request
+
+from app.core.config import get_settings
+from app.core.exceptions import AuthenticationError, LoginRateLimitError
+from app.core.login_rate_limit import enforce_login_rate_limit, login_client_key
+from app.core.security import create_access_token, decode_access_token
+
+
+def _request(
+    headers: list[tuple[bytes, bytes]] | None = None,
+    host: str = "203.0.113.9",
+) -> Request:
+    return Request(
+        {
+            "type": "http",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "method": "POST",
+            "scheme": "http",
+            "path": "/v1/auth/login",
+            "raw_path": b"/v1/auth/login",
+            "query_string": b"",
+            "headers": headers or [],
+            "client": (host, 123),
+            "server": ("test", 80),
+        }
+    )
 
 
 def test_register_and_login(client: TestClient) -> None:
@@ -57,3 +88,81 @@ def test_me_returns_current_user(auth_client: TestClient) -> None:
     response = auth_client.get("/v1/auth/me")
     assert response.status_code == 200
     assert response.json()["email"] == "knight@goldqueen.dev"
+
+
+def test_access_token_round_trip() -> None:
+    assert decode_access_token(create_access_token("42")) == "42"
+
+
+def test_tampered_token_is_rejected() -> None:
+    token = create_access_token("42")
+    with pytest.raises(AuthenticationError):
+        decode_access_token(token[:-2] + "aa")
+
+
+def test_expired_token_is_rejected() -> None:
+    settings = get_settings()
+    token = jwt.encode(
+        {"sub": "42", "exp": datetime.now(UTC) - timedelta(minutes=5)},
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+    with pytest.raises(AuthenticationError):
+        decode_access_token(token)
+
+
+def test_token_without_subject_is_rejected() -> None:
+    settings = get_settings()
+    token = jwt.encode(
+        {"exp": datetime.now(UTC) + timedelta(minutes=5)},
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+    with pytest.raises(AuthenticationError):
+        decode_access_token(token)
+
+
+def test_login_rate_limit_blocks_repeated_attempts(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "login_rate_limit_max", 2)
+    payload = {"email": "nobody@goldqueen.dev", "password": "NotThePassword1!"}
+
+    assert client.post("/v1/auth/login", json=payload).status_code == 401
+    assert client.post("/v1/auth/login", json=payload).status_code == 401
+    blocked = client.post("/v1/auth/login", json=payload)
+
+    assert blocked.status_code == 429
+    assert blocked.json()["code"] == "login_rate_limited"
+    assert blocked.headers["retry-after"].isdigit()
+
+
+def test_login_client_key_prefers_platform_headers() -> None:
+    proxied = _request(
+        headers=[
+            (b"x-forwarded-for", b"203.0.113.5, 10.0.0.1"),
+            (b"x-real-ip", b"203.0.113.5"),
+        ],
+        host="10.0.0.1",
+    )
+    assert login_client_key(proxied, trust_proxy_headers=True) == "203.0.113.5"
+
+    forwarded = _request(
+        headers=[(b"x-forwarded-for", b"203.0.113.8, 10.0.0.2")],
+        host="10.0.0.1",
+    )
+    assert login_client_key(forwarded, trust_proxy_headers=True) == "203.0.113.8"
+    assert login_client_key(forwarded, trust_proxy_headers=False) == "10.0.0.1"
+
+
+def test_login_window_expires(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "login_rate_limit_max", 1)
+    monkeypatch.setattr(settings, "login_rate_limit_window_seconds", 10)
+    request = _request()
+
+    enforce_login_rate_limit(request, now=100.0)
+    with pytest.raises(LoginRateLimitError):
+        enforce_login_rate_limit(request, now=105.0)
+    enforce_login_rate_limit(request, now=111.0)

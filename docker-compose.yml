@@ -8,7 +8,9 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: gold_queen
     ports:
-      - "5432:5432"
+      # Local development only. Binding every interface would expose Postgres
+      # on the host's network, not just to processes on this machine.
+      - "127.0.0.1:5432:5432"
     volumes:
       - gold_queen_data:/var/lib/postgresql/data
     healthcheck:
