@@ -33,7 +33,7 @@ The public demo uses **Pluggy Sandbox** data and intentional UI limits (one pre-
 | Migrations | Alembic |
 | Open Finance | Pluggy API (`/v2/transactions`) |
 | AI | Google GenAI SDK (`gemini-3.6-flash`) |
-| Auth | JWT (python-jose + bcrypt) |
+| Auth | JWT (PyJWT + bcrypt) |
 | Quality | pytest, ruff, GitHub Actions |
 
 ## Quick start
@@ -80,14 +80,21 @@ All settings come from environment variables (see [.env.example](.env.example)):
 | Variable | Description |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL DSN. Falls back to local SQLite when unset. |
-| `JWT_SECRET` | Signing key for access tokens. Use a long random string in production. |
+| `ENVIRONMENT` | `development` (default) or `production`. Production refuses to start when `JWT_SECRET` is the placeholder or shorter than 32 characters. |
+| `JWT_SECRET` | HMAC key for access tokens. Any value is accepted in development, including the placeholder in `.env.example`. In production use a unique random string of at least 32 characters. |
 | `PLUGGY_CLIENT_ID` / `PLUGGY_CLIENT_SECRET` | Pluggy application credentials ([dashboard.pluggy.ai](https://dashboard.pluggy.ai)). |
 | `GEMINI_API_KEY` | Google AI Studio key ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)). |
 | `GEMINI_MODEL` | Defaults to `gemini-3.6-flash`. |
-| `CORS_ORIGINS` | Comma-separated allowed origins. |
-| `CORS_ORIGIN_REGEX` | Pattern for Vercel preview URLs (default: `gold-queen-web` previews). |
+| `CORS_ORIGINS` | Comma-separated exact origins. The default lists local dev plus `https://gold-queen-web.vercel.app` and `https://gold-queen-web-<team>.vercel.app`. |
+| `VERCEL_TEAM_SLUG` | Vercel team slug that owns the web app (default `luizssantiago92`). Preview CORS is built from this when `CORS_ORIGIN_REGEX` is unset. |
+| `CORS_ORIGIN_REGEX` | Optional override for preview origins. Leave unset to allow only `gold-queen-web` previews whose hostname ends with `-<VERCEL_TEAM_SLUG>.vercel.app`. Set an empty value to disable previews. Do not use a `gold-queen-web-*` pattern without the team slug: anyone can register that project name. |
+| `LOGIN_RATE_LIMIT_MAX` | Login attempts allowed per caller per window (default `10`). |
+| `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | Length of that window in seconds (default `60`). |
+| `LOGIN_TRUST_PROXY_HEADERS` | When `true` (default), the login limiter reads `X-Real-IP` or the first `X-Forwarded-For` hop. |
 | `MAX_BANK_CONNECTIONS` | Free-plan bank quota (default `3`). |
 | `CHAT_DAILY_LIMIT` | Shared daily AI quota for chat **and** Queen's Tips (default `5`). |
+
+`POST /v1/auth/login` returns `429` / `login_rate_limited` after `LOGIN_RATE_LIMIT_MAX` attempts from the same caller inside the window. The counter is stored in the process that handled the request. On Vercel (and any other serverless or multi-worker host) each isolate has its own counter, a cold start clears it, and instances do not share attempts. The limit slows guessing against one warm instance; it is not an account-wide or fleet-wide lockout. It also trusts proxy IP headers only because the platform overwrites them — do not expose the process directly, or a client can rotate `X-Forwarded-For` and skip the window. There is no Redis (or other shared store) behind this limiter.
 
 Never expose `PLUGGY_CLIENT_SECRET` or `GEMINI_API_KEY` to the browser.
 
@@ -145,9 +152,10 @@ On failure, a deterministic fallback is used and affected records carry `is_guar
 ```bash
 pytest
 ruff check app tests
+pip-audit
 ```
 
-CI runs on every push to `main` (`.github/workflows/ci.yml`).
+CI runs on every push to `main` (`.github/workflows/ci.yml`) and fails if `pip-audit` reports a known vulnerability in the installed environment.
 
 ## Project process
 

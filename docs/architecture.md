@@ -82,8 +82,9 @@ Product rules (bank limit, daily quota) are injected into the summary so the mod
 
 - JWT bearer authentication on all `/v1/*` routes except auth register/login.
 - Users can only access their own connections and transactions (scoped queries).
-- Secrets (`JWT_SECRET`, Pluggy, Gemini) are server-side only.
-- CORS allowlist + regex for Vercel preview deployments.
+- Secrets (`JWT_SECRET`, Pluggy, Gemini) are server-side only. `ENVIRONMENT=production` refuses the default or a short `JWT_SECRET`.
+- CORS allowlist for exact production origins, plus a preview regex anchored to the Vercel team slug.
+- Login attempts are throttled in process memory (not shared across serverless isolates).
 
 ## Deployment topology
 

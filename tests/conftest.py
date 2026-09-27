@@ -18,7 +18,17 @@ os.environ["PLUGGY_CLIENT_ID"] = ""
 os.environ["PLUGGY_CLIENT_SECRET"] = ""
 
 from app.core.database import get_session  # noqa: E402
+from app.core.login_rate_limit import reset_login_rate_limit  # noqa: E402
 from app.main import app  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _isolated_login_rate_limit() -> Generator[None, None, None]:
+    # The login window is process-global. Without a reset, later tests would
+    # inherit attempts from earlier ones and start returning 429.
+    reset_login_rate_limit()
+    yield
+    reset_login_rate_limit()
 
 
 @pytest.fixture(name="session")

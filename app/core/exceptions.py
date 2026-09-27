@@ -44,6 +44,21 @@ class RateLimitError(DomainError):
     code = "rate_limit_reached"
 
 
+class LoginRateLimitError(DomainError):
+    """Raised when the login attempt window is exhausted.
+
+    Distinct from ``RateLimitError`` so clients do not treat a locked login
+    as the Queen's daily AI quota.
+    """
+
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    code = "login_rate_limited"
+
+    def __init__(self, message: str, *, retry_after_seconds: int) -> None:
+        super().__init__(message)
+        self.headers = {"Retry-After": str(retry_after_seconds)}
+
+
 class UpstreamError(DomainError):
     """Raised when Pluggy or the AI provider fails."""
 
@@ -57,4 +72,5 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.message, "code": exc.code},
+            headers=getattr(exc, "headers", None),
         )

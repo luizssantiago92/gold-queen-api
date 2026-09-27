@@ -87,11 +87,12 @@ Required environment variables in production:
 | Variable | Notes |
 | --- | --- |
 | `DATABASE_URL` | Supabase connection string |
-| `JWT_SECRET` | Long random value, distinct from local |
+| `JWT_SECRET` | At least 32 characters, and not the `change-me-...` placeholder. The process exits on boot otherwise. |
 | `PLUGGY_CLIENT_ID` / `PLUGGY_CLIENT_SECRET` | Pluggy application credentials |
 | `GEMINI_API_KEY` | Google AI Studio key |
-| `CORS_ORIGINS` | The deployed frontend origin |
-| `CORS_ORIGIN_REGEX` | Optional. Defaults to this project's Vercel preview hostnames |
+| `CORS_ORIGINS` | Exact frontend origins, including `https://gold-queen-web.vercel.app` |
+| `VERCEL_TEAM_SLUG` | `luizssantiago92`, unless the web project moves to another Vercel team |
+| `CORS_ORIGIN_REGEX` | Leave unset. The app derives a preview pattern anchored to `VERCEL_TEAM_SLUG`. An empty value disables previews. |
 | `ENVIRONMENT` | `production` |
 
 ## Frontend — Vercel
@@ -118,4 +119,5 @@ Two failure modes look identical from the outside and are worth ruling out first
 - [ ] `POST /v1/auth/login` works with a seeded demo user
 - [ ] `POST /v1/connections/connect` returns a real Pluggy token
 - [ ] The frontend origin is present in `CORS_ORIGINS`
-- [ ] `JWT_SECRET` is not the default placeholder
+- [ ] `JWT_SECRET` is not the default placeholder and is at least 32 characters (`ENVIRONMENT=production` will not boot otherwise)
+- [ ] `CORS_ORIGIN_REGEX` is unset or anchored to `VERCEL_TEAM_SLUG` (not `gold-queen-web-*`)
