@@ -2,7 +2,8 @@
 
 from datetime import UTC, datetime, timedelta
 
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
@@ -23,7 +24,10 @@ def create_access_token(subject: str) -> str:
     settings = get_settings()
     expires_at = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
     payload = {"sub": subject, "exp": expires_at, "iat": datetime.now(UTC)}
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    if isinstance(token, bytes):
+        return token.decode("ascii")
+    return token
 
 
 def decode_access_token(token: str) -> str:
@@ -33,7 +37,7 @@ def decode_access_token(token: str) -> str:
         payload = jwt.decode(
             token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
         )
-    except JWTError as exc:
+    except InvalidTokenError as exc:
         raise AuthenticationError("Invalid or expired token.") from exc
 
     subject = payload.get("sub")

@@ -27,7 +27,10 @@ jobs:
       - name: Lint
         run: ruff check app tests
 
+      - name: Audit dependencies
+        run: pip-audit
+
       - name: Test
         env:
-          JWT_SECRET: ci-secret-key-for-tests
+          JWT_SECRET: ci-secret-key-for-tests-0123456789abcdef
         run: pytest
