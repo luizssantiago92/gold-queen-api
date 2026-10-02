@@ -80,6 +80,53 @@ def test_login_with_wrong_password_fails(client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def test_register_is_rejected_when_signup_is_closed(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(get_settings(), "allow_registration", False)
+    response = client.post(
+        "/v1/auth/register",
+        json={
+            "email": "closed@goldqueen.dev",
+            "display_name": "Closed Gate",
+            "password": "StrongPass123!",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "Registration is disabled.",
+        "code": "registration_disabled",
+    }
+
+
+def test_login_still_works_when_registration_is_closed(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = {
+        "email": "already@goldqueen.dev",
+        "display_name": "Already Inside",
+        "password": "StrongPass123!",
+    }
+    assert client.post("/v1/auth/register", json=payload).status_code == 201
+
+    monkeypatch.setattr(get_settings(), "allow_registration", False)
+    login = client.post(
+        "/v1/auth/login",
+        json={"email": payload["email"], "password": payload["password"]},
+    )
+    assert login.status_code == 200
+    blocked = client.post(
+        "/v1/auth/register",
+        json={
+            "email": "late@goldqueen.dev",
+            "display_name": "Too Late",
+            "password": "StrongPass123!",
+        },
+    )
+    assert blocked.status_code == 403
+    assert blocked.json()["code"] == "registration_disabled"
+
+
 def test_protected_route_requires_token(client: TestClient) -> None:
     assert client.get("/v1/dashboard/overview").status_code == 401
 

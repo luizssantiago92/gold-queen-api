@@ -191,7 +191,7 @@ Response:
 
 Use `remaining_requests` to display the remaining audiences with the Queen.
 
-**Shared quota:** `GET /v1/advisor/queen-tips` also consumes this daily limit (default `5`). Opening Queen's Tips after several chat messages may leave fewer requests for chat, and vice versa.
+**Shared quota:** `GET /v1/advisor/queen-tips` also consumes this daily limit (default `5`). Opening Queen's Tips after several chat messages may leave fewer requests for chat, and vice versa. A normal account has one counter. Each public demo account is counted per visitor IP, with the same limit.
 
 ## Error handling
 
@@ -205,6 +205,8 @@ Every handled error returns the same shape:
 | --- | --- | --- |
 | `401` | `unauthenticated` | Clear token, redirect to login |
 | `403` | `connection_limit_reached` | Show the Free plan limit message |
+| `403` | `demo_read_only` | The public demo cannot connect, sync, or delete a bank |
+| `403` | `registration_disabled` | Public signup is closed |
 | `409` | `conflict` | Email already registered |
 | `429` | `rate_limit_reached` | Show the Queen's quota speech bubble |
 | `502` | `upstream_error` | Ask the user to retry the sync |

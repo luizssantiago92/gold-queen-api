@@ -3,7 +3,7 @@
 import hashlib
 from datetime import date
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from sqlmodel import select
 
 from app.api.deps import AIDep, CurrentUser, SessionDep
@@ -12,6 +12,7 @@ from app.models.entities import ChatCache
 from app.schemas.advisor import ChatRequest, ChatResponse
 from app.services import rate_limit, treasury
 from app.services.chat_scope import is_chat_in_scope, off_topic_reply
+from app.services.demo_access import demo_quota_subject
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
 
@@ -26,8 +27,10 @@ def query(
     current_user: CurrentUser,
     session: SessionDep,
     ai: AIDep,
+    request: Request,
 ) -> ChatResponse:
     user_id: int = current_user.id  # type: ignore[assignment]
+    subject_key = demo_quota_subject(current_user, request)
     settings = get_settings()
     today = date.today()
     question_hash = hashlib.sha256(_normalize(payload.question).encode()).hexdigest()
@@ -45,7 +48,9 @@ def query(
         return ChatResponse(
             answer=cached.answer,
             from_cache=True,
-            remaining_requests=rate_limit.remaining_requests(session, user_id),
+            remaining_requests=rate_limit.remaining_requests(
+                session, user_id, subject_key
+            ),
             daily_limit=settings.chat_daily_limit,
         )
 
@@ -53,11 +58,15 @@ def query(
         return ChatResponse(
             answer=off_topic_reply(payload.locale),
             from_cache=False,
-            remaining_requests=rate_limit.remaining_requests(session, user_id),
+            remaining_requests=rate_limit.remaining_requests(
+                session, user_id, subject_key
+            ),
             daily_limit=settings.chat_daily_limit,
         )
 
-    remaining = rate_limit.consume_request(session, user_id, payload.locale)
+    remaining = rate_limit.consume_request(
+        session, user_id, payload.locale, subject_key
+    )
     summary = treasury.build_ai_summary(session, user_id)
     answer, answered = ai.chat(payload.question, summary, payload.locale)
 
@@ -76,7 +85,7 @@ def query(
         )
         session.commit()
     else:
-        remaining = rate_limit.refund_request(session, user_id)
+        remaining = rate_limit.refund_request(session, user_id, subject_key)
 
     return ChatResponse(
         answer=answer,

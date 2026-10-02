@@ -112,6 +112,43 @@ def test_empty_database_url_falls_back_to_sqlite() -> None:
     assert Settings(database_url="").database_url.startswith("sqlite")
 
 
+def test_registration_defaults_open_outside_production(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ALLOW_REGISTRATION", raising=False)
+
+    assert Settings(environment="development").registration_enabled is True
+    assert Settings(environment="test").registration_enabled is True
+    assert Settings(environment="development").allow_registration is None
+
+
+def test_production_closes_registration_unless_set_explicitly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ALLOW_REGISTRATION", raising=False)
+
+    closed = Settings(environment="production")
+    assert closed.allow_registration is None
+    assert closed.registration_enabled is False
+
+    assert Settings(environment="production", allow_registration=True).registration_enabled
+    assert Settings(environment="Production").registration_enabled is False
+    assert (
+        Settings(environment="development", allow_registration=False).registration_enabled
+        is False
+    )
+
+
+def test_allow_registration_env_overrides_the_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ALLOW_REGISTRATION", "true")
+    assert Settings(environment="production").registration_enabled is True
+
+    monkeypatch.setenv("ALLOW_REGISTRATION", "false")
+    assert Settings(environment="development").registration_enabled is False
+
+
 def test_integration_flags_reflect_credentials() -> None:
     disabled = Settings(pluggy_client_id="", pluggy_client_secret="", gemini_api_key="")
     assert disabled.pluggy_enabled is False

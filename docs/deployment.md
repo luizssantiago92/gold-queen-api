@@ -94,6 +94,7 @@ Required environment variables in production:
 | `VERCEL_TEAM_SLUG` | `luizssantiago92`, unless the web project moves to another Vercel team |
 | `CORS_ORIGIN_REGEX` | Leave unset. The app derives a preview pattern anchored to `VERCEL_TEAM_SLUG`. An empty value disables previews. |
 | `ENVIRONMENT` | `production` |
+| `ALLOW_REGISTRATION` | Optional. Unset (or `false`) keeps public signup closed in production. Set `true` only if new accounts should be allowed. |
 
 ## Frontend — Vercel
 
@@ -117,7 +118,8 @@ Two failure modes look identical from the outside and are worth ruling out first
 
 - [ ] `GET /health` returns `pluggy_live: true` and `ai_live: true`
 - [ ] `POST /v1/auth/login` works with a seeded demo user
-- [ ] `POST /v1/connections/connect` returns a real Pluggy token
+- [ ] `POST /v1/connections/connect` as the demo user returns `403` / `demo_read_only`
+- [ ] `ALLOW_REGISTRATION` is unset or `false` on the live service, unless public signup should be open
 - [ ] The frontend origin is present in `CORS_ORIGINS`
 - [ ] `JWT_SECRET` is not the default placeholder and is at least 32 characters (`ENVIRONMENT=production` will not boot otherwise)
 - [ ] `CORS_ORIGIN_REGEX` is unset or anchored to `VERCEL_TEAM_SLUG` (not `gold-queen-web-*`)

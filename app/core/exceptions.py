@@ -37,6 +37,20 @@ class ConnectionLimitError(DomainError):
     code = "connection_limit_reached"
 
 
+class DemoReadOnlyError(DomainError):
+    """Raised when the shared public demo account tries to mutate data."""
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "demo_read_only"
+
+
+class RegistrationDisabledError(DomainError):
+    """Raised when public signup is closed."""
+
+    status_code = status.HTTP_403_FORBIDDEN
+    code = "registration_disabled"
+
+
 class RateLimitError(DomainError):
     """Raised when the daily Gold Queen interaction quota is exhausted."""
 

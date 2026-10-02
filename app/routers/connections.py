@@ -11,6 +11,7 @@ from app.schemas.connections import (
     SyncResponse,
 )
 from app.services import sync as sync_service
+from app.services.demo_access import ensure_not_demo
 from app.services.treasury import user_connections
 
 router = APIRouter(prefix="/v1/connections", tags=["connections"])
@@ -28,6 +29,7 @@ async def create_connect_token(
     pluggy: PluggyDep,
 ) -> ConnectTokenResponse:
     """Issue a Pluggy Connect token, enforcing the Free plan quota first."""
+    ensure_not_demo(current_user)
     used = sync_service.ensure_connection_quota(session, current_user.id)  # type: ignore[arg-type]
     token = await pluggy.create_connect_token(str(current_user.id))
 
@@ -45,6 +47,7 @@ def delete_connection(
     session: SessionDep,
 ) -> None:
     """Unlink a bank, freeing a slot in the Free plan quota."""
+    ensure_not_demo(current_user)
     sync_service.delete_connection(
         session,
         current_user.id,  # type: ignore[arg-type]
@@ -60,6 +63,7 @@ async def sync_connection(
     pluggy: PluggyDep,
     ai: AIDep,
 ) -> SyncResponse:
+    ensure_not_demo(current_user)
     result = await sync_service.sync_item(
         session=session,
         user_id=current_user.id,  # type: ignore[arg-type]

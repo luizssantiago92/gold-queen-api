@@ -3,7 +3,7 @@
 import hashlib
 from datetime import date
 
-from fastapi import APIRouter, Header, Query
+from fastapi import APIRouter, Header, Query, Request
 from sqlmodel import select
 
 from app.api.deps import AIDep, CurrentUser, SessionDep
@@ -11,6 +11,7 @@ from app.core.locale import DEFAULT_LOCALE, Locale, parse_accept_language, parse
 from app.models.entities import ChatCache
 from app.schemas.advisor import QueenTipsResponse
 from app.services import rate_limit, treasury
+from app.services.demo_access import demo_quota_subject
 
 router = APIRouter(prefix="/v1/advisor", tags=["advisor"])
 
@@ -22,12 +23,14 @@ def queen_tips(
     current_user: CurrentUser,
     session: SessionDep,
     ai: AIDep,
+    request: Request,
     locale: Locale = Query(DEFAULT_LOCALE),
     accept_language: str | None = Header(default=None, alias="Accept-Language"),
 ) -> QueenTipsResponse:
     resolved_locale = parse_locale(locale) if locale else parse_accept_language(accept_language)
     """Return today's diagnosis, reusing the cached one to spend zero extra tokens."""
     user_id: int = current_user.id  # type: ignore[assignment]
+    subject_key = demo_quota_subject(current_user, request)
     summary = treasury.build_ai_summary(session, user_id)
 
     # The cache key includes the summary so a new sync produces fresh advice.
@@ -54,7 +57,7 @@ def queen_tips(
             from_cache=True,
         )
 
-    rate_limit.consume_request(session, user_id, resolved_locale)
+    rate_limit.consume_request(session, user_id, resolved_locale, subject_key)
     tips, guarded = ai.queen_tips(summary, resolved_locale)
 
     if guarded:

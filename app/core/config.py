@@ -99,6 +99,10 @@ class Settings(BaseSettings):
     # with Queen's Tips and transaction categorization. A higher figure here would
     # only promise questions the upstream quota cannot serve.
     chat_daily_limit: int = 5
+    # None means the variable was not set: open in development and test, closed
+    # when ENVIRONMENT=production. An explicit true or false always wins, so
+    # production can reopen signup without a code change.
+    allow_registration: bool | None = None
 
     @field_validator("database_url", mode="before")
     @classmethod
@@ -146,6 +150,12 @@ class Settings(BaseSettings):
     @property
     def gemini_enabled(self) -> bool:
         return bool(self.gemini_api_key)
+
+    @property
+    def registration_enabled(self) -> bool:
+        if self.allow_registration is None:
+            return self.environment.strip().lower() != "production"
+        return self.allow_registration
 
 
 def assert_production_jwt_secret(settings: Settings) -> None:
