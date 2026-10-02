@@ -1,6 +1,24 @@
 """Open Finance connection tests (RF01, RF02)."""
 
+import logging
+from collections.abc import Callable
+
+import httpx
+import pytest
 from fastapi.testclient import TestClient
+
+from app.core.config import get_settings
+
+ITEM_ALPHA = "11111111-1111-4111-8111-111111111111"
+ITEM_BETA = "33333333-3333-4333-8333-333333333333"
+ITEM_OWNED = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+ITEM_SHARED = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+ITEM_SLOTS = (
+    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa0",
+    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
+)
+ITEM_FOURTH = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4"
 
 
 def test_connect_token_is_issued(auth_client: TestClient) -> None:
@@ -16,34 +34,35 @@ def test_connect_token_is_issued(auth_client: TestClient) -> None:
 def test_sync_creates_connection_accounts_and_transactions(
     auth_client: TestClient,
 ) -> None:
-    response = auth_client.post("/v1/connections/sync", json={"item_id": "item-alpha"})
+    response = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_ALPHA})
     assert response.status_code == 200
 
     body = response.json()
     assert body["accounts_synced"] >= 1
     assert body["transactions_synced"] >= 1
     assert body["transactions_categorized"] == body["transactions_synced"]
+    assert body["connection"]["pluggy_item_id"] == ITEM_ALPHA
     assert body["connection"]["last_synced_at"] is not None
 
 
 def test_sync_is_idempotent(auth_client: TestClient) -> None:
-    auth_client.post("/v1/connections/sync", json={"item_id": "item-beta"})
-    second = auth_client.post("/v1/connections/sync", json={"item_id": "item-beta"})
+    auth_client.post("/v1/connections/sync", json={"item_id": ITEM_BETA})
+    second = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_BETA})
 
     assert second.status_code == 200
     assert second.json()["transactions_synced"] == 0
 
 
 def test_free_plan_allows_only_three_connections(auth_client: TestClient) -> None:
-    for index in range(3):
+    for item_id in ITEM_SLOTS:
         assert (
             auth_client.post(
-                "/v1/connections/sync", json={"item_id": f"item-{index}"}
+                "/v1/connections/sync", json={"item_id": item_id}
             ).status_code
             == 200
         )
 
-    blocked = auth_client.post("/v1/connections/sync", json={"item_id": "item-fourth"})
+    blocked = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_FOURTH})
     assert blocked.status_code == 403
     assert blocked.json()["code"] == "connection_limit_reached"
 
@@ -54,8 +73,8 @@ def test_free_plan_allows_only_three_connections(auth_client: TestClient) -> Non
 def test_deleting_a_connection_frees_a_slot_and_erases_its_data(
     auth_client: TestClient,
 ) -> None:
-    for index in range(3):
-        auth_client.post("/v1/connections/sync", json={"item_id": f"item-{index}"})
+    for item_id in ITEM_SLOTS:
+        auth_client.post("/v1/connections/sync", json={"item_id": item_id})
 
     assert auth_client.post("/v1/connections/connect").status_code == 403
 
@@ -70,7 +89,7 @@ def test_deleting_a_connection_frees_a_slot_and_erases_its_data(
     remaining = auth_client.get("/v1/dashboard/transactions").json()
     assert remaining["total"] > 0
     assert auth_client.post(
-        "/v1/connections/sync", json={"item_id": "item-0"}
+        "/v1/connections/sync", json={"item_id": ITEM_SLOTS[0]}
     ).json()["transactions_synced"] > 0
 
 
@@ -90,7 +109,7 @@ def test_deleting_someone_elses_connection_is_rejected(client: TestClient) -> No
 
     client.post(
         "/v1/connections/sync",
-        json={"item_id": "owned-item"},
+        json={"item_id": ITEM_OWNED},
         headers={"Authorization": f"Bearer {owner}"},
     )
     connection_id = client.get(
@@ -125,7 +144,7 @@ def test_connections_are_scoped_per_user(client: TestClient) -> None:
 
     client.post(
         "/v1/connections/sync",
-        json={"item_id": "shared-item"},
+        json={"item_id": ITEM_SHARED},
         headers={"Authorization": f"Bearer {first}"},
     )
 
@@ -133,3 +152,136 @@ def test_connections_are_scoped_per_user(client: TestClient) -> None:
         "/v1/connections", headers={"Authorization": f"Bearer {second}"}
     )
     assert response.json() == []
+
+
+def _register_and_login(client: TestClient, email: str) -> str:
+    client.post(
+        "/v1/auth/register",
+        json={"email": email, "display_name": "User", "password": "StrongPass123!"},
+    )
+    response = client.post(
+        "/v1/auth/login", json={"email": email, "password": "StrongPass123!"}
+    )
+    return response.json()["access_token"]
+
+
+def _enable_pluggy(
+    monkeypatch: pytest.MonkeyPatch,
+    handler: Callable[[httpx.Request], httpx.Response],
+) -> None:
+    """Point the live Pluggy client at ``handler`` for one test."""
+    settings = get_settings()
+    monkeypatch.setattr(settings, "pluggy_client_id", "id")
+    monkeypatch.setattr(settings, "pluggy_client_secret", "secret")
+    transport = httpx.MockTransport(handler)
+    original = httpx.AsyncClient
+
+    def patched(*args, **kwargs):
+        kwargs["transport"] = transport
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", patched)
+
+
+def test_syncing_another_users_item_is_not_found(client: TestClient) -> None:
+    owner = _register_and_login(client, "owner-sync@goldqueen.dev")
+    intruder = _register_and_login(client, "intruder-sync@goldqueen.dev")
+
+    created = client.post(
+        "/v1/connections/sync",
+        json={"item_id": ITEM_OWNED},
+        headers={"Authorization": f"Bearer {owner}"},
+    )
+    assert created.status_code == 200
+
+    stolen = client.post(
+        "/v1/connections/sync",
+        json={"item_id": ITEM_OWNED},
+        headers={"Authorization": f"Bearer {intruder}"},
+    )
+    assert stolen.status_code == 404
+    assert stolen.json() == {
+        "detail": "Bank connection not found.",
+        "code": "not_found",
+    }
+
+    intruder_rows = client.get(
+        "/v1/connections", headers={"Authorization": f"Bearer {intruder}"}
+    ).json()
+    owner_rows = client.get(
+        "/v1/connections", headers={"Authorization": f"Bearer {owner}"}
+    ).json()
+    assert intruder_rows == []
+    assert len(owner_rows) == 1
+    assert owner_rows[0]["pluggy_item_id"] == ITEM_OWNED
+
+
+def test_sync_rejects_a_non_uuid_item_id(auth_client: TestClient) -> None:
+    response = auth_client.post("/v1/connections/sync", json={"item_id": "../x"})
+    assert response.status_code == 422
+    assert auth_client.get("/v1/connections").json() == []
+
+
+def test_sync_rejects_a_pluggy_item_owned_by_someone_else(
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth":
+            return httpx.Response(200, json={"apiKey": "key"})
+        seen.append(request.url.path)
+        return httpx.Response(
+            200,
+            json={
+                "id": ITEM_ALPHA,
+                "status": "UPDATED",
+                "clientUserId": "not-this-user",
+                "connector": {"name": "Pluggy Bank"},
+            },
+        )
+
+    _enable_pluggy(monkeypatch, handler)
+    response = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_ALPHA})
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "not_found"
+    assert not any(path.startswith("/accounts") for path in seen)
+    assert auth_client.get("/v1/connections").json() == []
+
+
+def test_sync_does_not_leak_pluggy_error_bodies(
+    auth_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    secret = "pluggy-secret-9f3a2c"
+    upstream_body = (
+        f'{{"message":"item lookup denied","apiKey":"{secret}",'
+        f'"clientSecret":"super-secret-value"}}'
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth":
+            return httpx.Response(200, json={"apiKey": "server-api-key"})
+        return httpx.Response(403, text=upstream_body)
+
+    _enable_pluggy(monkeypatch, handler)
+
+    with caplog.at_level(logging.WARNING, logger="app.services.pluggy"):
+        response = auth_client.post(
+            "/v1/connections/sync", json={"item_id": ITEM_ALPHA}
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {
+        "detail": "Pluggy item fetch failed.",
+        "code": "upstream_error",
+    }
+    assert secret not in response.text
+    assert "super-secret-value" not in response.text
+    assert upstream_body not in response.text
+    assert secret not in caplog.text
+    assert "super-secret-value" not in caplog.text
+    assert "403" in caplog.text
+    assert auth_client.get("/v1/connections").json() == []

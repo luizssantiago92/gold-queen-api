@@ -12,15 +12,31 @@ simulator so the API stays fully demoable offline (portfolio friendly).
 """
 
 import hashlib
+import logging
 import random
+import re
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 import httpx
 
 from app.core.config import get_settings
 from app.core.exceptions import UpstreamError
+
+logger = logging.getLogger(__name__)
+
+# Keys Pluggy (or a proxy in front of it) may echo back. The client sees a
+# generic message; the log keeps the status and a redacted body.
+_JSON_SECRET = re.compile(
+    r'(?i)("(?:api[_-]?key|client[_-]?secret|access[_-]?token|authorization|password|secret)"\s*:\s*)"(?:[^"\\]|\\.)*"'
+)
+_ASSIGNMENT_SECRET = re.compile(
+    r"(?i)\b(api[_-]?key|client[_-]?secret|access[_-]?token|authorization|password|secret)\b(\s*[:=]\s*)\S+"
+)
+_BEARER = re.compile(r"(?i)\bBearer\s+\S+")
+_LOG_BODY_LIMIT = 500
 
 _API_KEY_TTL = timedelta(hours=1, minutes=45)
 
@@ -40,6 +56,39 @@ _SANDBOX_MERCHANTS = (
 )
 
 _SANDBOX_SALARY = "Soldo Real"
+
+
+def _canonical_item_id(item_id: UUID | str) -> str:
+    """Return the canonical UUID text.
+
+    ``str(UUID(...))`` is only hex and hyphens, so it cannot rewrite the
+    request path the way ``../webhooks`` would.
+    """
+    return str(UUID(str(item_id)))
+
+
+def _item_url(base_url: str, item_id: UUID | str) -> str:
+    return f"{base_url.rstrip('/')}/items/{_canonical_item_id(item_id)}"
+
+
+def _redact_upstream_body(body: str) -> str:
+    redacted = _JSON_SECRET.sub(r'\1"[redacted]"', body)
+    redacted = _ASSIGNMENT_SECRET.sub(r"\1\2[redacted]", redacted)
+    redacted = _BEARER.sub("Bearer [redacted]", redacted)
+    if len(redacted) > _LOG_BODY_LIMIT:
+        return redacted[:_LOG_BODY_LIMIT] + "..."
+    return redacted
+
+
+def _fail_upstream(operation: str, response: httpx.Response) -> None:
+    """Log the upstream failure without secrets and raise a generic error."""
+    logger.warning(
+        "Pluggy %s failed with status %s: %s",
+        operation,
+        response.status_code,
+        _redact_upstream_body(response.text),
+    )
+    raise UpstreamError(f"Pluggy {operation} failed.")
 
 
 class PluggyAccount:
@@ -82,7 +131,7 @@ class PluggyClient:
             },
         )
         if response.status_code >= 400:
-            raise UpstreamError(f"Pluggy authentication failed: {response.text}")
+            _fail_upstream("authentication", response)
 
         self._api_key = response.json()["apiKey"]
         self._api_key_expires_at = now + _API_KEY_TTL
@@ -101,36 +150,42 @@ class PluggyClient:
                 json={"options": {"clientUserId": client_user_id}},
             )
             if response.status_code >= 400:
-                raise UpstreamError(f"Pluggy connect token failed: {response.text}")
+                _fail_upstream("connect token", response)
             return response.json()["accessToken"]
 
-    async def fetch_item(self, item_id: str) -> dict[str, Any]:
+    async def fetch_item(self, item_id: UUID) -> dict[str, Any]:
+        item_ref = _canonical_item_id(item_id)
         if not self.enabled:
-            return {"id": item_id, "connector": {"name": _simulated_institution(item_id)}, "status": "UPDATED"}
+            return {
+                "id": item_ref,
+                "connector": {"name": _simulated_institution(item_ref)},
+                "status": "UPDATED",
+            }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             api_key = await self._authenticate(client)
             response = await client.get(
-                f"{self._settings.pluggy_base_url}/items/{item_id}",
+                _item_url(self._settings.pluggy_base_url, item_ref),
                 headers={"X-API-KEY": api_key},
             )
             if response.status_code >= 400:
-                raise UpstreamError(f"Pluggy item fetch failed: {response.text}")
+                _fail_upstream("item fetch", response)
             return response.json()
 
-    async def fetch_accounts(self, item_id: str) -> list[PluggyAccount]:
+    async def fetch_accounts(self, item_id: UUID) -> list[PluggyAccount]:
+        item_ref = _canonical_item_id(item_id)
         if not self.enabled:
-            return _simulated_accounts(item_id)
+            return _simulated_accounts(item_ref)
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             api_key = await self._authenticate(client)
             response = await client.get(
                 f"{self._settings.pluggy_base_url}/accounts",
                 headers={"X-API-KEY": api_key},
-                params={"itemId": item_id},
+                params={"itemId": item_ref},
             )
             if response.status_code >= 400:
-                raise UpstreamError(f"Pluggy accounts fetch failed: {response.text}")
+                _fail_upstream("accounts fetch", response)
 
             return [
                 PluggyAccount(
@@ -161,9 +216,7 @@ class PluggyClient:
             for _ in range(_MAX_TRANSACTION_PAGES):
                 response = await client.get(url, headers=headers, params=params)
                 if response.status_code >= 400:
-                    raise UpstreamError(
-                        f"Pluggy transactions fetch failed: {response.text}"
-                    )
+                    _fail_upstream("transactions fetch", response)
 
                 payload = response.json()
                 for item in payload.get("results", []):

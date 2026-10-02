@@ -1,7 +1,10 @@
 """Open Finance synchronization: Pluggy item -> accounts -> categorized transactions."""
 
+import logging
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Any
+from uuid import UUID
 
 from sqlmodel import Session, col, delete, select
 
@@ -10,6 +13,8 @@ from app.core.exceptions import ConnectionLimitError, NotFoundError
 from app.models.entities import Account, BankConnection, Transaction
 from app.services.ai import AIEngine
 from app.services.pluggy import PluggyClient
+
+logger = logging.getLogger(__name__)
 
 
 class SyncResult:
@@ -85,24 +90,64 @@ def delete_connection(session: Session, user_id: int, connection_id: int) -> Non
     session.commit()
 
 
+def _connection_for_sync(
+    session: Session, user_id: int, item_id: str
+) -> BankConnection | None:
+    """Return this user's row, or 404 when another user already linked the item.
+
+    A missing row means the item has not been claimed yet. Callers must still
+    confirm the Pluggy ``clientUserId`` before inserting one. The 404 matches
+    a missing connection so the response does not reveal that the item exists.
+    """
+    rows = session.exec(
+        select(BankConnection).where(BankConnection.pluggy_item_id == item_id)
+    ).all()
+    if not rows:
+        return None
+    for row in rows:
+        if row.user_id == user_id:
+            return row
+    logger.warning("Rejected sync of item %s: not owned by user %s", item_id, user_id)
+    raise NotFoundError("Bank connection not found.")
+
+
+def _ensure_pluggy_item_owner(
+    item: dict[str, Any], user_id: int, item_id: str, pluggy: PluggyClient
+) -> None:
+    """A first sync may claim an item only when Pluggy says it belongs to this user.
+
+    Connect tokens are issued with ``clientUserId`` set to the user id, and
+    Pluggy copies that onto the item. The offline simulator has no tenant, so
+    it cannot prove ownership; rows already stored are still checked above.
+    """
+    if not pluggy.enabled:
+        return
+    owner = item.get("clientUserId")
+    if owner is not None and str(owner).strip() == str(user_id):
+        return
+    logger.warning(
+        "Rejected sync of item %s: clientUserId does not match user %s",
+        item_id,
+        user_id,
+    )
+    raise NotFoundError("Bank connection not found.")
+
+
 async def sync_item(
     session: Session,
     user_id: int,
-    item_id: str,
+    item_id: UUID,
     pluggy: PluggyClient,
     ai: AIEngine,
     institution_name: str | None = None,
 ) -> SyncResult:
-    connection = session.exec(
-        select(BankConnection).where(
-            BankConnection.user_id == user_id,
-            BankConnection.pluggy_item_id == item_id,
-        )
-    ).first()
+    item_ref = str(item_id)
+    connection = _connection_for_sync(session, user_id, item_ref)
 
     if connection is None:
         ensure_connection_quota(session, user_id)
         item = await pluggy.fetch_item(item_id)
+        _ensure_pluggy_item_owner(item, user_id, item_ref, pluggy)
         resolved_name = (
             institution_name
             or (item.get("connector") or {}).get("name")
@@ -110,7 +155,7 @@ async def sync_item(
         )
         connection = BankConnection(
             user_id=user_id,
-            pluggy_item_id=item_id,
+            pluggy_item_id=item_ref,
             institution_name=resolved_name,
             status=item.get("status", "UPDATED"),
         )

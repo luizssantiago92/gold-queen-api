@@ -6,14 +6,16 @@ never issues a request, so the whole suite passed against a dead endpoint. These
 tests pin the wire contract instead of the simulated behaviour.
 """
 
+import logging
 from collections.abc import Callable
 from decimal import Decimal
+from uuid import UUID
 
 import httpx
 import pytest
 
 from app.core.exceptions import UpstreamError
-from app.services.pluggy import PluggyClient
+from app.services.pluggy import PluggyClient, _item_url
 
 
 def _live_client(
@@ -91,16 +93,37 @@ async def test_transactions_use_the_v2_endpoint_and_follow_the_cursor(
     assert transactions[0].transaction_date.isoformat() == "2026-08-02"
 
 
+def test_item_url_is_built_only_from_the_uuid() -> None:
+    item_id = UUID("70642699-1111-4111-8111-111111111111")
+    assert _item_url("https://api.pluggy.ai/", item_id) == (
+        "https://api.pluggy.ai/items/70642699-1111-4111-8111-111111111111"
+    )
+    with pytest.raises(ValueError):
+        _item_url("https://api.pluggy.ai", "../webhooks")
+
+
 @pytest.mark.asyncio
 async def test_transactions_surface_upstream_failures(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
+    secret = "pluggy-secret-body"
+
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/auth":
             return httpx.Response(200, json={"apiKey": "key"})
-        return httpx.Response(410, json={"code": "ENDPOINT_DEPRECATED"})
+        return httpx.Response(
+            410,
+            json={"code": "ENDPOINT_DEPRECATED", "apiKey": secret},
+        )
 
     client = _live_client(monkeypatch, handler)
 
-    with pytest.raises(UpstreamError):
-        await client.fetch_transactions("acc-1")
+    with caplog.at_level(logging.WARNING, logger="app.services.pluggy"):
+        with pytest.raises(UpstreamError, match="Pluggy transactions fetch failed") as raised:
+            await client.fetch_transactions("acc-1")
+
+    assert secret not in str(raised.value)
+    assert "ENDPOINT_DEPRECATED" not in str(raised.value)
+    assert secret not in caplog.text
+    assert "[redacted]" in caplog.text
+    assert "410" in caplog.text
