@@ -10,7 +10,7 @@ from app.services.ai import AIEngine
 
 
 def test_queen_tips_returns_three_sections(auth_client: TestClient) -> None:
-    auth_client.post("/v1/connections/sync", json={"item_id": "item-alpha"})
+    auth_client.post("/v1/connections/sync", json={"item_id": "11111111-1111-4111-8111-111111111111"})
 
     body = auth_client.get("/v1/advisor/queen-tips").json()
     assert body["critical_expense"]

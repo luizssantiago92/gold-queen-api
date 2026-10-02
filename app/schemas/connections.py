@@ -1,6 +1,7 @@
 """Open Finance connection payloads (RF01)."""
 
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -17,7 +18,9 @@ class ConnectTokenResponse(BaseModel):
 class SyncRequest(BaseModel):
     """Sent by the frontend after the Pluggy widget reports success."""
 
-    item_id: str = Field(min_length=1, description="Pluggy item id returned by the widget")
+    # A UUID cannot carry a path segment, so values like ``../webhooks`` never
+    # reach the Pluggy client.
+    item_id: UUID = Field(description="Pluggy item id returned by the widget")
     institution_name: str | None = None
 
 

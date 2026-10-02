@@ -86,8 +86,29 @@ async def _pick_sandbox_connector(
     )
 
 
+async def _demo_user_id(
+    client: httpx.AsyncClient, api_url: str, email: str, password: str
+) -> str:
+    """The id the API stamps on connect tokens, so the item can be synced."""
+    login = await client.post(
+        f"{api_url}/v1/auth/login", json={"email": email, "password": password}
+    )
+    if login.status_code >= 400:
+        raise SeedError(f"Demo login failed: {login.text}")
+
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    me = await client.get(f"{api_url}/v1/auth/me", headers=headers)
+    if me.status_code >= 400:
+        raise SeedError(f"Could not read the demo user: {me.text}")
+    return str(me.json()["id"])
+
+
 async def _create_item(
-    client: httpx.AsyncClient, base_url: str, api_key: str, connector: dict[str, Any]
+    client: httpx.AsyncClient,
+    base_url: str,
+    api_key: str,
+    connector: dict[str, Any],
+    client_user_id: str,
 ) -> str:
     response = await client.post(
         f"{base_url}/items",
@@ -95,6 +116,8 @@ async def _create_item(
         json={
             "connectorId": connector["id"],
             "parameters": {"user": SANDBOX_USER, "password": SANDBOX_PASSWORD},
+            # Sync refuses an item whose clientUserId is not the calling user.
+            "clientUserId": client_user_id,
         },
     )
     if response.status_code >= 400:
@@ -176,7 +199,13 @@ async def main() -> int:
         name = connector.get("name", "Sandbox Bank")
         print(f"Using sandbox connector: {name} (id {connector['id']})")
 
-        item_id = await _create_item(client, pluggy_url, api_key, connector)
+        print("Resolving the demo user...")
+        client_user_id = await _demo_user_id(
+            client, api_url, args.email, args.password
+        )
+        item_id = await _create_item(
+            client, pluggy_url, api_key, connector, client_user_id
+        )
         print("Waiting for the sandbox item to finish updating...")
         await _await_item(client, pluggy_url, api_key, item_id)
 
