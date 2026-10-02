@@ -14,7 +14,7 @@ Technical documentation for the Gold Queen backend. Start with the [repository R
 ## Quick links
 
 - **OpenAPI:** `/openapi.json` and `/docs` on any running instance
-- **Health:** `GET /health` → `{ "status": "ok", "pluggy_live": bool, "ai_live": bool }`
+- **Health:** `GET /health` → `{ "status": "ok", "pluggy_live": bool, "ai_live": bool }`; `GET /health?db=1` also runs `SELECT 1` and adds `"database": "ok"` (503 when unreachable). The `Keep alive` workflow calls it twice a week so the free Supabase project never pauses.
 - **Production:** https://gold-queen-api.onrender.com
 - **Frontend repo:** https://github.com/luizssantiago92/gold-queen-web
 
