@@ -17,6 +17,12 @@ services:
         value: "3.11.9"
       - key: ENVIRONMENT
         value: production
+      # Public signup. The app also defaults this to closed in production when
+      # the variable is absent. Set true only if new accounts should be allowed.
+      # An already-created Render service does not pick this up until the env
+      # var is saved in the dashboard (or the blueprint is applied again).
+      - key: ALLOW_REGISTRATION
+        value: "false"
       # Supabase session pooler URL, with the +psycopg2 driver suffix.
       - key: DATABASE_URL
         sync: false

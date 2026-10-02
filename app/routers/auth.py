@@ -5,7 +5,11 @@ from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import get_settings
-from app.core.exceptions import AuthenticationError, ConflictError
+from app.core.exceptions import (
+    AuthenticationError,
+    ConflictError,
+    RegistrationDisabledError,
+)
 from app.core.login_rate_limit import enforce_login_rate_limit
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.entities import User
@@ -21,6 +25,9 @@ router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, session: SessionDep) -> User:
+    if not get_settings().registration_enabled:
+        raise RegistrationDisabledError("Registration is disabled.")
+
     existing = session.exec(select(User).where(User.email == payload.email)).first()
     if existing is not None:
         raise ConflictError("This email is already registered.")

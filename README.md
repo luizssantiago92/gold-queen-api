@@ -67,7 +67,9 @@ Interactive docs: http://127.0.0.1:8000/docs
 | `queen@goldqueen.dev` | `QueenDemo123!` |
 | `squire@goldqueen.dev` | `SquireDemo123!` |
 
-`python -m app.seed` creates users only. To populate bank data on a remote deploy, run `python -m scripts.seed_demo_connection` (requires Pluggy credentials). See [docs/demo-operations.md](docs/demo-operations.md).
+The public demo is **read-only**. Those accounts can sign in and read the dashboard, tips, and chat. `POST /v1/connections/connect`, `POST /v1/connections/sync`, and `DELETE /v1/connections/{id}` return `403` / `demo_read_only`. The daily AI quota for each demo account is counted **per visitor IP** (same `CHAT_DAILY_LIMIT`), using the same client address as the login limiter.
+
+`python -m app.seed` creates users only. `scripts/seed_demo_connection.py` links a sandbox bank by calling connect and sync as the demo user, so it cannot refresh a deploy where that guard is on. See [docs/demo-operations.md](docs/demo-operations.md).
 
 ### Offline mode
 
@@ -92,7 +94,8 @@ All settings come from environment variables (see [.env.example](.env.example)):
 | `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | Length of that window in seconds (default `60`). |
 | `LOGIN_TRUST_PROXY_HEADERS` | When `true` (default), the login limiter reads `X-Real-IP` or the first `X-Forwarded-For` hop. |
 | `MAX_BANK_CONNECTIONS` | Free-plan bank quota (default `3`). |
-| `CHAT_DAILY_LIMIT` | Shared daily AI quota for chat **and** Queen's Tips (default `5`). |
+| `CHAT_DAILY_LIMIT` | Shared daily AI quota for chat **and** Queen's Tips (default `5`). Demo accounts split this same limit per visitor IP. |
+| `ALLOW_REGISTRATION` | Public signup. When unset, enabled in development and test, disabled when `ENVIRONMENT=production`. Set `true` or `false` to override. Closed signup makes `POST /v1/auth/register` return `403` / `registration_disabled`. |
 
 `POST /v1/auth/login` returns `429` / `login_rate_limited` after `LOGIN_RATE_LIMIT_MAX` attempts from the same caller inside the window. The counter is stored in the process that handled the request. On Vercel (and any other serverless or multi-worker host) each isolate has its own counter, a cold start clears it, and instances do not share attempts. The limit slows guessing against one warm instance; it is not an account-wide or fleet-wide lockout. It also trusts proxy IP headers only because the platform overwrites them — do not expose the process directly, or a client can rotate `X-Forwarded-For` and skip the window. There is no Redis (or other shared store) behind this limiter.
 
@@ -123,9 +126,11 @@ Full contracts: [docs/frontend-integration.md](docs/frontend-integration.md) · 
 ## Business rules
 
 - **Bank quota:** max 3 connections on the free plan → `403` / `connection_limit_reached`.
-- **Daily AI quota:** `CHAT_DAILY_LIMIT` (default 5) shared by **chat and Queen's Tips** → `429` / `rate_limit_reached`.
+- **Daily AI quota:** `CHAT_DAILY_LIMIT` (default 5) shared by **chat and Queen's Tips** → `429` / `rate_limit_reached`. A normal account has one counter. Each demo account (`queen@`, `squire@`) has one counter per client IP.
 - **Same-day cache:** identical chat questions return cached answers without consuming quota.
+- **Demo is read-only:** connect, sync, and delete on a demo account → `403` / `demo_read_only`. Reads, tips, and chat keep working.
 - **Demo date refresh:** demo accounts (`queen@`, `squire@`) auto-shift transaction dates to the current month on dashboard reads.
+- **Public signup:** `ALLOW_REGISTRATION` unset is open outside production and closed when `ENVIRONMENT=production`. Closed → `403` / `registration_disabled`.
 
 ## AI guardrails
 

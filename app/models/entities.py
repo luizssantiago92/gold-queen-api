@@ -85,3 +85,21 @@ class ChatUsage(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", index=True)
     usage_date: date = Field(index=True)
     request_count: int = Field(default=0)
+
+
+class DemoChatUsage(SQLModel, table=True):
+    """Per-visitor daily quota for a shared demo account.
+
+    Normal accounts keep a single ``chat_usage`` row. The public demo is one
+    user seen by many visitors, so its counter is split by client address.
+    A new table (not a new column) is created by ``create_all`` on startup,
+    which leaves databases that already exist able to boot.
+    """
+
+    __tablename__ = "demo_chat_usage"
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    subject_key: str = Field(index=True)
+    usage_date: date = Field(index=True)
+    request_count: int = Field(default=0)

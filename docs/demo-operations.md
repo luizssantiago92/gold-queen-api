@@ -10,6 +10,15 @@ The production web app (https://gold-queen-web.vercel.app) ships with:
 - One Pluggy Sandbox bank already synced (when seed script has been run)
 - Open Finance Connect **disabled in the UI** — a modal explains demo limits
 - Auto-refreshing transaction dates for demo emails so the dashboard never looks "frozen" in a new month
+- A read-only guard: visitors can browse and ask the Queen, but cannot connect, sync, or delete banks
+
+## Read-only account
+
+`queen@goldqueen.dev` and `squire@goldqueen.dev` share published credentials. `POST /v1/connections/connect`, `POST /v1/connections/sync`, and `DELETE /v1/connections/{id}` return `403` with code `demo_read_only`. Dashboard reads still refresh transaction dates.
+
+Because the seed script below calls connect and sync as that user, it cannot repopulate a deploy where the guard is enabled. Bank data has to already be in place.
+
+Each demo account's AI quota (`CHAT_DAILY_LIMIT`, chat and Queen's Tips together) is counted per client IP, with the same address rules as the login limiter. A normal account still has one shared daily counter.
 
 ## 1. Create demo users
 

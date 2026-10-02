@@ -9,6 +9,10 @@ from app.services.treasury import user_transactions
 DEMO_EMAILS = frozenset({"queen@goldqueen.dev", "squire@goldqueen.dev"})
 
 
+def is_demo_email(email: str) -> bool:
+    return email.strip().lower() in DEMO_EMAILS
+
+
 def refresh_demo_transaction_dates(session: Session, user_id: int) -> int:
     """Shift every transaction so the newest lands on yesterday.
 
@@ -48,6 +52,6 @@ def refresh_demo_transaction_dates(session: Session, user_id: int) -> int:
 
 
 def maybe_refresh_demo(session: Session, email: str, user_id: int) -> int:
-    if email.strip().lower() not in DEMO_EMAILS:
+    if not is_demo_email(email):
         return 0
     return refresh_demo_transaction_dates(session, user_id)

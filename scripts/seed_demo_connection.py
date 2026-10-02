@@ -10,6 +10,9 @@ in a browser; this script performs the same steps server-to-server instead.
 Credentials come from the environment (see .env.example). Pluggy must be
 configured, otherwise the API runs against its offline simulator and there is no
 real item to sync.
+
+The public demo account is read-only: connect and sync return 403
+``demo_read_only``. This script cannot refresh a deploy where that guard is on.
 """
 
 from __future__ import annotations
@@ -37,6 +40,15 @@ TERMINAL_FAILURES = {"LOGIN_ERROR", "OUTDATED", "ERROR"}
 
 class SeedError(RuntimeError):
     pass
+
+
+def _is_demo_read_only(response: httpx.Response) -> bool:
+    if response.status_code != 403:
+        return False
+    try:
+        return response.json().get("code") == "demo_read_only"
+    except ValueError:
+        return False
 
 
 async def _pluggy_api_key(client: httpx.AsyncClient, base_url: str) -> str:
@@ -167,6 +179,11 @@ async def _sync_into_api(
     # Enforces the free-plan quota before anything is written.
     quota = await client.post(f"{api_url}/v1/connections/connect", headers=headers)
     if quota.status_code >= 400:
+        if _is_demo_read_only(quota):
+            raise SeedError(
+                "The demo account is read-only (demo_read_only), so connect "
+                "and sync are rejected."
+            )
         raise SeedError(f"Connection quota rejected the request: {quota.text}")
 
     # Categorization runs through Gemini one batch at a time, so this is slow.
@@ -177,6 +194,11 @@ async def _sync_into_api(
         timeout=300.0,
     )
     if response.status_code >= 400:
+        if _is_demo_read_only(response):
+            raise SeedError(
+                "The demo account is read-only (demo_read_only), so connect "
+                "and sync are rejected."
+            )
         raise SeedError(f"Sync failed: {response.text}")
     return response.json()
 
