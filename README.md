@@ -102,7 +102,7 @@ Never expose `PLUGGY_CLIENT_SECRET` or `GEMINI_API_KEY` to the browser.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/health` | Liveness + `pluggy_live` / `ai_live` flags |
+| `GET` | `/health` | Liveness + `pluggy_live` / `ai_live` flags; `?db=1` also runs `SELECT 1` (503 if the database is unreachable) |
 | `POST` | `/v1/auth/register` | Create account |
 | `POST` | `/v1/auth/login` | JWT bearer token |
 | `GET` | `/v1/auth/me` | Current user |

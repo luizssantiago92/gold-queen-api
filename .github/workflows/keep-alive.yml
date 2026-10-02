@@ -1,0 +1,32 @@
+name: Keep alive
+
+# The free Supabase project pauses after 7 days without database activity.
+# This pings /health?db=1, which runs `SELECT 1` through the API, twice a week.
+on:
+  schedule:
+    - cron: "17 12 * * 1,4" # Mon and Thu, 12:17 UTC (09:17 BRT)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Ping API and database
+        # Render's free tier cold start can take a minute, so retry generously.
+        # Fail unless the API confirms the query reached the database.
+        run: |
+          body=$(curl --fail --silent --show-error \
+            --retry 5 --retry-delay 20 --retry-all-errors \
+            --max-time 120 \
+            "https://gold-queen-api.onrender.com/health?db=1")
+          echo "$body"
+          grep -q '"database":"ok"' <<< "$body"

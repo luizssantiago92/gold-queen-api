@@ -2,6 +2,8 @@
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import OperationalError
+from sqlmodel import Session
 
 from app.core.config import get_settings
 from app.services.ai import AIEngine
@@ -103,3 +105,28 @@ def test_health_endpoint(client: TestClient) -> None:
     body = client.get("/health").json()
     assert body["status"] == "ok"
     assert body["ai_provider"] in {"offline", "ok", "degraded"}
+
+
+def test_health_skips_database_by_default(client: TestClient) -> None:
+    assert "database" not in client.get("/health").json()
+
+
+def test_health_db_probe_reports_ok(client: TestClient) -> None:
+    response = client.get("/health", params={"db": 1})
+    assert response.status_code == 200
+    assert response.json()["database"] == "ok"
+
+
+def test_health_db_probe_returns_503_when_database_fails(
+    client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*_args: object, **_kwargs: object) -> None:
+        raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+    monkeypatch.setattr(session, "exec", broken)
+
+    response = client.get("/health", params={"db": 1})
+    assert response.status_code == 503
+    assert response.json()["status"] == "degraded"
+    assert response.json()["database"] == "unreachable"
+    assert "connection refused" not in response.text
