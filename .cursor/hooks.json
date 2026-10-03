@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "retornatus hook stop --host cursor",
+        "loop_limit": 1
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": "retornatus hook subagent-stop --host cursor",
+        "loop_limit": 1
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "retornatus hook session-start --host cursor",
+        "timeout": 30
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "retornatus hook file-edit --host cursor",
+        "matcher": "Write",
+        "timeout": 30
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "retornatus hook file-edit --host cursor",
+        "matcher": "Write",
+        "timeout": 30
+      }
+    ]
+  }
+}

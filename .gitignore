@@ -24,3 +24,19 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
+
+# retornatus-gitignore:begin
+# Local index and cache. Canonical Retornatus artifacts stay tracked.
+.retornatus/index/
+.retornatus/runtime/
+# Private keys and local env files. Public keys stay tracked.
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+!.retornatus/keys/*.pub
+# retornatus-gitignore:end
+
+# Local-only agent tools. Graphify writes graphify-out/; rtk stays on the machine.
+graphify-out/

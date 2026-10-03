@@ -1,8 +1,8 @@
-# Agents
+# Project
 
 <!-- retornatus-bridge:begin -->
 ## Retornatus
-Use `.retornatus/` as canonical governance state.
+Respect Contracts, Rules, Authority, and Evidence under `.retornatus/`.
 <!-- retornatus-bridge:end -->
 
 <!-- retornatus-active-rules:begin -->

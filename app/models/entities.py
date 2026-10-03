@@ -57,7 +57,7 @@ class Transaction(SQLModel, table=True):
     amount: Decimal = Field(max_digits=14, decimal_places=2)
     transaction_date: date = Field(index=True)
     category: str = Field(default="Uncategorized")
-    # True when the AI output passed strict schema validation (spec-guardrails style).
+    # True when the AI output passed strict schema validation.
     is_guarded: bool = Field(default=False)
     created_at: datetime = Field(default_factory=_utcnow)
 

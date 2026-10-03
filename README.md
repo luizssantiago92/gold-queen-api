@@ -162,12 +162,10 @@ pip-audit -r requirements-dev.txt
 
 CI runs on every push to `main` (`.github/workflows/ci.yml`) and fails if `pip-audit` reports a known vulnerability in the project requirements. The audit is scoped to those files so packages preinstalled on the runner are not treated as dependencies.
 
-## Project process
+## Developing with agents
 
-This repository uses [Spec Guardrails](https://github.com/luizssantiago92/spec-guardrails) for agent workflows (`.specs/`).
+This repository is governed by [Retornatus](https://github.com/luizssantiago92/retornatus). The finish line, the proof, and the notes live in `.retornatus/`. Pull requests run the Retornatus check, which posts a verdict comment.
 
-```bash
-npx @luizsantiago/spec-guardrails doctor
-```
+Graphify and rtk are local-only tools. Nothing they produce is committed (`graphify-out/` is gitignored).
 
 > **Note:** Root `PRD.md` is a historical product brief. This README and `docs/` are the authoritative technical reference.

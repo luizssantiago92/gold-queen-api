@@ -1,0 +1,13 @@
+---
+description: Retornatus governance bridge
+globs:
+alwaysApply: true
+---
+
+Follow Retornatus Contracts, Rules, and Evidence requirements in `.retornatus/`.
+Govern the work. Bound the agent. Verify the outcome.
+Use the Retornatus hub skill under `.cursor/skills/retornatus/`.
+
+<!-- retornatus-active-rules:begin -->
+_No active Retornatus Rules._
+<!-- retornatus-active-rules:end -->

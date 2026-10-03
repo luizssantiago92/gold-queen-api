@@ -1,0 +1,57 @@
+# Retornatus PR gates (opt-in)
+#
+# Copy into a consumer repo as `.github/workflows/retornatus.yml`.
+#
+# The job uses the composite action published with this repository:
+#   uses: luizssantiago92/retornatus@v1
+# The owner tags v1 and publishes the matching package to PyPI.
+# Until that tag exists, pin the action to a full commit SHA, or use
+# `uses: ./` with `version: local` inside this repository.
+#
+# The action installs Retornatus (input `version`, default latest on PyPI),
+# runs `gate suppressions`, `verify`, and `gate scope` with `--json`, writes
+# the markdown to the job summary, and posts or updates one sticky comment
+# marked `<!-- retornatus-verdict -->`.
+#
+# Permissions on the job: contents read, pull-requests write.
+# Fork pull requests receive a read-only token. The action skips the comment
+# and still writes the job summary. `fail-on: not_satisfied` (the default)
+# still fails the job when the verdict is not SATISFIED.
+#
+# RETORNATUS_OMISSION (environment, not an action input):
+#   fail (default) — a code diff with no touched Change fails the job
+#   warn — print a warning and continue
+#
+# Checkout needs fetch-depth: 0 so the diff base is in the clone.
+# Third-party actions stay pinned to commit SHAs.
+# This workflow does not push, merge, deploy, or sign receipts.
+
+name: Retornatus
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+env:
+  RETORNATUS_OMISSION: fail
+
+jobs:
+  retornatus-gates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: luizssantiago92/retornatus@v1 # marketplace major tag; owner publishes it
+        with:
+          comment: "true"
+          fail-on: not_satisfied
