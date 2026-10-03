@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0001/E-007",
+  "type": "repository_observation",
+  "subject": "README documents Gemini REST via httpx, not the GenAI SDK.",
+  "source": "README stack table now says Gemini REST API via httpx. requirements.txt no longer lists google-genai. Render buildCommand remains pip install -r requirements.txt.",
+  "producer": "agent",
+  "observed_at": "2026-10-03T05:19:38.726957Z",
+  "subject_state": "commit:f5e20a61368c795488836cf292497ec66e41e937",
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0001/claim-done-2",
+      "note": null
+    }
+  ]
+}

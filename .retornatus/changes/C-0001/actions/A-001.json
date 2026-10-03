@@ -22,7 +22,7 @@
       "schema_version": 1,
       "id": "C-0001/T-001",
       "description": "Add pyproject.toml, bump ruff, drop google-genai, and correct the README",
-      "lifecycle": "ACTIVE",
+      "lifecycle": "COMPLETED",
       "depends_on": [],
       "resources": [
         "pyproject.toml",
@@ -37,7 +37,7 @@
       "schema_version": 1,
       "id": "C-0001/T-002",
       "description": "Fix mypy errors and narrow persisted ids without behavior change",
-      "lifecycle": "PENDING",
+      "lifecycle": "COMPLETED",
       "depends_on": [
         "C-0001/T-001"
       ],
@@ -50,7 +50,7 @@
       "schema_version": 1,
       "id": "C-0001/T-003",
       "description": "Format the Python tree in one commit",
-      "lifecycle": "PENDING",
+      "lifecycle": "COMPLETED",
       "depends_on": [
         "C-0001/T-002"
       ],
@@ -65,7 +65,7 @@
       "schema_version": 1,
       "id": "C-0001/T-004",
       "description": "Record the format SHA and add mypy plus format check to CI",
-      "lifecycle": "PENDING",
+      "lifecycle": "COMPLETED",
       "depends_on": [
         "C-0001/T-003"
       ],

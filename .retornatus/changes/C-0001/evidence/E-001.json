@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "C-0001/E-001",
+  "type": "test_result",
+  "subject": "pytest, ruff check, and mypy pass for app and tests",
+  "source": "pytest",
+  "producer": "retornatus",
+  "observed_at": "2026-10-03T05:19:23.824378Z",
+  "subject_state": "commit:f5e20a61368c795488836cf292497ec66e41e937",
+  "provenance": "executed",
+  "command": [
+    "uv",
+    "run",
+    "pytest",
+    "-q"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-10-03T05:19:01.645969Z",
+  "ended_at": "2026-10-03T05:19:23.603027Z",
+  "duration_ms": 21957,
+  "output_sha256": "a507c3a369e11cf14417a81cdf84aba76a35ac4fde8cb92583b7756967b5212a",
+  "output_tail": "........................................................................ [ 65%]\n......................................                                   [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/fastapi/testclient.py:1\n  /workspace/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854\n  /workspace/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13\n    from crypt import crypt as _crypt\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n",
+  "output_artifact": ".retornatus/changes/C-0001/evidence/E-001.output.txt",
+  "git_commit": "f5e20a61368c795488836cf292497ec66e41e937",
+  "worktree_dirty": false,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0001/claim-done-1",
+      "note": null
+    }
+  ]
+}

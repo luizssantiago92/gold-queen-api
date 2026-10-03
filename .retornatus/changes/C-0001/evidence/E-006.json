@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "C-0001/E-006",
+  "type": "repository_observation",
+  "subject": "ship rollback",
+  "source": "CI adds ruff format --check and mypy on top of the existing pip install. Rollback is reverting .github/workflows/ci.yml. Render still installs requirements.txt and was not retargeted. The Alembic revision was reformatted only; upgrade and downgrade operations are unchanged.",
+  "producer": "agent",
+  "observed_at": "2026-10-03T05:19:38.525526Z",
+  "subject_state": "commit:f5e20a61368c795488836cf292497ec66e41e937",
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": []
+}
