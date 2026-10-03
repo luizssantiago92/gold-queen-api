@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0003",
+  "title": "Stop blocking the event loop and lighten health",
+  "demand": {
+    "schema_version": 1,
+    "statement": "API-M1, API-M2, API-M6, and API-B8 on the Render single-process uvicorn API: connection connect and sync are async handlers that use the synchronous SQLAlchemy session and call blocking Gemini code (httpx.Client with a 30s timeout and time.sleep on retries), so one sync stalls every other request. GET /health calls Gemini on every request, exposes environment, and is the Render health check. GET / returns 404. Responses lack nosniff, HSTS, referrer policy, and frame denial. gold-queen-web does not read /health fields. Keep-alive greps database ok. CORS stays limited to the web app origin.",
+    "kind": "BUG"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 2,
+  "relations": [],
+  "created_at": "2026-10-03T10:30:42.252562Z"
+}

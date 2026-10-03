@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0003",
+  "version": 1,
+  "what": "Move synchronous database and Gemini work off the event loop for the connection handlers, keeping async Pluggy HTTP on the loop. Make GET /health local: no outbound calls and no environment field; db=1 still runs SELECT 1 and returns database ok; deep=1 is the only Gemini probe. Redirect GET / to /docs. Add nosniff, HSTS, no-referrer, and X-Frame-Options DENY without CSP. Do not add dependencies or change unrelated behavior.",
+  "constraints": [],
+  "done_criteria": [
+    "pytest shows connect and sync run synchronous work off the event loop",
+    "pytest shows GET /health omits environment and skips the provider probe unless deep=1, and db=1 still returns database ok",
+    "pytest shows GET / redirects to /docs",
+    "pytest shows nosniff, HSTS, no-referrer, and DENY frame headers while CORS for the web origin still works"
+  ],
+  "active": true,
+  "activated_at": "2026-10-03T10:30:42.258462Z"
+}
