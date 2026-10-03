@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "C-0004/E-007",
+  "type": "repository_observation",
+  "subject": "ship rollback",
+  "source": "Rollback of the workflow is reverting .github/workflows/retornatus.yml so RETORNATUS_OMISSION stays fail for every pull request. That brings back omission failures for Dependabot manifest diffs and leaves suppressions, verify, and scope in place. Rollback of the application is reverting requirements.txt, requirements-dev.txt, pyproject.toml, and uv.lock, restoring passlib and bcrypt 4.0.1, and restoring the previous hash_password and verify_password. Existing rows stay bcrypt $2b$ hashes either way. No database migration is included.",
+  "producer": "agent",
+  "observed_at": "2026-10-03T11:14:07.187327Z",
+  "subject_state": null,
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": []
+}
