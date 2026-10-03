@@ -113,7 +113,72 @@ def test_a_failed_model_call_is_neither_cached_nor_charged(
 def test_health_endpoint(client: TestClient) -> None:
     body = client.get("/health").json()
     assert body["status"] == "ok"
-    assert body["ai_provider"] in {"offline", "ok", "degraded"}
+    assert isinstance(body["pluggy_live"], bool)
+    assert isinstance(body["ai_live"], bool)
+    assert "environment" not in body
+    assert "ai_provider" not in body
+    assert "database" not in body
+
+
+def test_health_does_not_probe_the_provider(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(self: AIEngine) -> bool:
+        raise AssertionError("provider probe")
+
+    monkeypatch.setattr(AIEngine, "provider_healthy", boom)
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "probe-should-not-run")
+
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["ai_live"] is True
+
+
+def test_health_deep_reports_the_provider(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "deep-probe-key")
+    monkeypatch.setattr(AIEngine, "provider_healthy", lambda self: True)
+
+    body = client.get("/health", params={"deep": 1}).json()
+    assert body["ai_provider"] == "ok"
+    assert body["ai_live"] is True
+    assert "environment" not in body
+    assert "database" not in body
+
+
+def test_health_deep_reports_degraded_when_the_probe_fails(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "deep-probe-key")
+    monkeypatch.setattr(AIEngine, "provider_healthy", lambda self: False)
+
+    body = client.get("/health", params={"deep": 1}).json()
+    assert body["status"] == "ok"
+    assert body["ai_provider"] == "degraded"
+
+
+def test_health_deep_is_offline_without_a_key(client: TestClient) -> None:
+    body = client.get("/health", params={"deep": 1}).json()
+    assert body["ai_live"] is False
+    assert body["ai_provider"] == "offline"
+
+
+def test_health_db_and_deep_can_be_combined(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(AIEngine, "provider_healthy", lambda self: True)
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "deep-probe-key")
+
+    body = client.get("/health", params={"db": 1, "deep": 1}).json()
+    assert body["database"] == "ok"
+    assert body["ai_provider"] == "ok"
+
+
+def test_root_redirects_to_docs(client: TestClient) -> None:
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"].endswith("/docs")
 
 
 def test_health_skips_database_by_default(client: TestClient) -> None:

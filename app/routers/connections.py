@@ -1,5 +1,6 @@
 """RF01 - Open Finance bank connection management."""
 
+import anyio
 from fastapi import APIRouter
 
 from app.api.deps import AIDep, CurrentUser, PluggyDep, SessionDep
@@ -24,16 +25,20 @@ def list_connections(current_user: CurrentUser, session: SessionDep):
 
 
 @router.post("/connect", response_model=ConnectTokenResponse)
-async def create_connect_token(
+def create_connect_token(
     current_user: CurrentUser,
     session: SessionDep,
     pluggy: PluggyDep,
 ) -> ConnectTokenResponse:
-    """Issue a Pluggy Connect token, enforcing the Free plan quota first."""
+    """Issue a Pluggy Connect token, enforcing the Free plan quota first.
+
+    Plain ``def`` so the synchronous session runs in the threadpool. The
+    Pluggy call is async HTTP and is scheduled back onto the event loop.
+    """
     ensure_not_demo(current_user)
     user_id = require_id(current_user.id)
     used = sync_service.ensure_connection_quota(session, user_id)
-    token = await pluggy.create_connect_token(str(user_id))
+    token = anyio.from_thread.run(pluggy.create_connect_token, str(user_id))
 
     return ConnectTokenResponse(
         connect_token=token,
@@ -58,15 +63,16 @@ def delete_connection(
 
 
 @router.post("/sync", response_model=SyncResponse)
-async def sync_connection(
+def sync_connection(
     payload: SyncRequest,
     current_user: CurrentUser,
     session: SessionDep,
     pluggy: PluggyDep,
     ai: AIDep,
 ) -> SyncResponse:
+    """Sync on the threadpool so Gemini's blocking client cannot stall the loop."""
     ensure_not_demo(current_user)
-    result = await sync_service.sync_item(
+    result = sync_service.sync_item(
         session=session,
         user_id=require_id(current_user.id),
         item_id=payload.item_id,

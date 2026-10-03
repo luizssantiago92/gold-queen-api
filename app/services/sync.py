@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+import anyio
 from sqlmodel import Session, col, delete, select
 
 from app.core.config import get_settings
@@ -133,7 +134,17 @@ def _ensure_pluggy_item_owner(
     raise NotFoundError("Bank connection not found.")
 
 
-async def sync_item(
+def _on_event_loop(func: Any, /, *args: Any) -> Any:
+    """Run one async Pluggy call on the server loop and wait on this thread.
+
+    Sync handlers run in FastAPI's threadpool so the synchronous session and
+    Gemini client never touch the loop. Pluggy is already async HTTP, so only
+    that call goes back.
+    """
+    return anyio.from_thread.run(func, *args)
+
+
+def sync_item(
     session: Session,
     user_id: int,
     item_id: UUID,
@@ -146,7 +157,7 @@ async def sync_item(
 
     if connection is None:
         ensure_connection_quota(session, user_id)
-        item = await pluggy.fetch_item(item_id)
+        item = _on_event_loop(pluggy.fetch_item, item_id)
         _ensure_pluggy_item_owner(item, user_id, item_ref, pluggy)
         resolved_name = (
             institution_name
@@ -166,7 +177,7 @@ async def sync_item(
     accounts_synced = 0
     new_transactions: list[Transaction] = []
 
-    for remote_account in await pluggy.fetch_accounts(item_id):
+    for remote_account in _on_event_loop(pluggy.fetch_accounts, item_id):
         account = session.exec(
             select(Account).where(
                 Account.connection_id == connection.id,
@@ -199,7 +210,9 @@ async def sync_item(
             ).all()
         }
 
-        for remote_tx in await pluggy.fetch_transactions(remote_account.account_id):
+        for remote_tx in _on_event_loop(
+            pluggy.fetch_transactions, remote_account.account_id
+        ):
             if remote_tx.transaction_id in known_ids:
                 continue
             new_transactions.append(

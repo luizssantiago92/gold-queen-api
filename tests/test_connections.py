@@ -1,13 +1,20 @@
 """Open Finance connection tests (RF01, RF02)."""
 
+import inspect
 import logging
+import threading
+import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.routers.connections import create_connect_token, sync_connection
+from app.services import sync as sync_service
+from app.services.ai import AIEngine
 
 ITEM_ALPHA = "11111111-1111-4111-8111-111111111111"
 ITEM_BETA = "33333333-3333-4333-8333-333333333333"
@@ -288,3 +295,51 @@ def test_sync_does_not_leak_pluggy_error_bodies(
     assert "super-secret-value" not in caplog.text
     assert "403" in caplog.text
     assert auth_client.get("/v1/connections").json() == []
+
+
+def test_connection_handlers_are_not_coroutines() -> None:
+    assert not inspect.iscoroutinefunction(create_connect_token)
+    assert not inspect.iscoroutinefunction(sync_connection)
+    assert not inspect.iscoroutinefunction(sync_service.sync_item)
+
+
+def test_sync_does_not_block_the_event_loop(
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A blocked categorize must not stop another request on the same loop."""
+    entered = threading.Event()
+    release = threading.Event()
+
+    def blocking_categorize(
+        self: AIEngine, transactions: list[tuple[str, str, object]]
+    ) -> tuple[dict[str, str], bool]:
+        del self
+        entered.set()
+        if not release.wait(timeout=3):
+            raise AssertionError("categorize was not released")
+        return {tx_id: "Food" for tx_id, _, _ in transactions}, True
+
+    monkeypatch.setattr(AIEngine, "categorize", blocking_categorize)
+
+    # Futures re-raise whatever the request raised, so the test does not
+    # swallow exceptions. release runs on the way out so a timeout cannot
+    # leave categorize waiting.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        sync_future = pool.submit(
+            auth_client.post,
+            "/v1/connections/sync",
+            json={"item_id": ITEM_ALPHA},
+        )
+        try:
+            assert entered.wait(timeout=3)
+            started = time.perf_counter()
+            root_future = pool.submit(auth_client.get, "/", follow_redirects=False)
+            root = root_future.result(timeout=1)
+            elapsed = time.perf_counter() - started
+        finally:
+            release.set()
+        sync_response = sync_future.result(timeout=3)
+
+    assert elapsed < 1
+    assert root.status_code == 307
+    assert sync_response.status_code == 200

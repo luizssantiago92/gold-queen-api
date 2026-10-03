@@ -14,8 +14,9 @@ Technical documentation for the Gold Queen backend. Start with the [repository R
 ## Quick links
 
 - **OpenAPI:** `/openapi.json` and `/docs` on any running instance
-- **Health:** `GET /health` → `{ "status": "ok", "pluggy_live": bool, "ai_live": bool }`; `GET /health?db=1` also runs `SELECT 1` and adds `"database": "ok"` (503 when unreachable). The `Keep alive` workflow calls it twice a week so the free Supabase project never pauses.
-- **Production:** https://gold-queen-api.onrender.com
+- **Health:** `GET /health` → `{ "status": "ok", "pluggy_live": bool, "ai_live": bool }` with no outbound calls and no `environment`. `GET /health?db=1` also runs `SELECT 1` and adds `"database":"ok"` (503 when unreachable). `GET /health?deep=1` is the only Gemini probe and adds `ai_provider`. The `Keep alive` workflow calls `?db=1` twice a week so the free Supabase project never pauses. Render's health check stays on `/health`.
+- **Root:** `GET /` redirects to `/docs` (307).
+- **Production docs:** https://gold-queen-api.onrender.com/docs
 - **Frontend repo:** https://github.com/luizssantiago92/gold-queen-web
 
 ## Conventions

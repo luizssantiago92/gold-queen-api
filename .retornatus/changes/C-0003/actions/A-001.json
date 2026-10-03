@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "C-0003/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "Move synchronous database and Gemini work off the event loop for the connection handlers, keeping async Pluggy HTTP on the loop. Make GET /health local: no outbound calls and no environment field; db=1 still runs SELECT 1 and returns database ok; deep=1 is the only Gemini probe. Redirect GET / to /docs. Add nosniff, HSTS, no-referrer, and X-Frame-Options DENY without CSP. Do not add dependencies or change unrelated behavior.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "pytest shows connect and sync run synchronous work off the event loop",
+    "pytest shows GET /health omits environment and skips the provider probe unless deep=1, and db=1 still returns database ok",
+    "pytest shows GET / redirects to /docs",
+    "pytest shows nosniff, HSTS, no-referrer, and DENY frame headers while CORS for the web origin still works"
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0003/T-001",
+      "description": "Move synchronous connection work off the event loop",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/**",
+        "tests/**"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0003/T-002",
+      "description": "Make health local, redirect the root, and document both",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "README.md",
+        "docs/**"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0003/T-003",
+      "description": "Add response security headers without CSP",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/**",
+        "tests/**"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}

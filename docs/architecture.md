@@ -16,7 +16,7 @@ The API is stateless at the HTTP layer. Session state lives in JWTs; treasury da
 
 ```
 app/
-├── main.py              FastAPI app, CORS, lifespan, /health
+├── main.py              FastAPI app, CORS, security headers, lifespan, / and /health
 ├── routers/             HTTP adapters (thin)
 ├── schemas/             Pydantic request/response models
 ├── services/            Business logic
@@ -54,7 +54,7 @@ Relationships: `User` → `BankConnection` → `Account` → `Transaction`.
 ## Sync pipeline
 
 1. Frontend obtains `connect_token` and completes Pluggy Connect (or demo uses pre-seeded item).
-2. `POST /v1/connections/sync` fetches accounts and paginated transactions.
+2. `POST /v1/connections/sync` fetches accounts and paginated transactions. The handler is synchronous, so that database work and Gemini categorization run in a worker thread. Pluggy HTTP stays on the event loop.
 3. New rows are categorized via Gemini (or fallback); guardrails validate the category.
 4. Dashboard endpoints read from PostgreSQL only — no live Pluggy calls on page load.
 
@@ -84,6 +84,7 @@ Product rules (bank limit, daily quota) are injected into the summary so the mod
 - Users can only access their own connections and transactions (scoped queries).
 - Secrets (`JWT_SECRET`, Pluggy, Gemini) are server-side only. `ENVIRONMENT=production` refuses the default or a short `JWT_SECRET`.
 - CORS allowlist for exact production origins, plus a preview regex anchored to the Vercel team slug.
+- Every response sends `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, and `Strict-Transport-Security` (`max-age=31536000; includeSubDomains`). HSTS is always sent because browsers ignore it on plain HTTP. There is no Content-Security-Policy, so Swagger UI at `/docs` still loads.
 - Login attempts are throttled in process memory (not shared across serverless isolates).
 
 ## Deployment topology

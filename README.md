@@ -6,7 +6,7 @@ This repository is the **data and intelligence layer** of the product. The compa
 
 | Live | URL |
 | --- | --- |
-| API | https://gold-queen-api.onrender.com |
+| API docs | https://gold-queen-api.onrender.com/docs |
 | Web app | https://gold-queen-web.vercel.app |
 | OpenAPI | https://gold-queen-api.onrender.com/openapi.json |
 
@@ -105,7 +105,8 @@ Never expose `PLUGGY_CLIENT_SECRET` or `GEMINI_API_KEY` to the browser.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/health` | Liveness + `pluggy_live` / `ai_live` flags; `?db=1` also runs `SELECT 1` (503 if the database is unreachable) |
+| `GET` | `/` | Redirects to `/docs` (307). Not listed in the OpenAPI schema. |
+| `GET` | `/health` | Local liveness: `status`, `pluggy_live`, `ai_live`. No outbound calls and no `environment`. `?db=1` runs `SELECT 1` and adds `"database":"ok"` (503 if the database is unreachable). `?deep=1` is the only Gemini probe and adds `ai_provider` (`ok`, `degraded`, or `offline`). |
 | `POST` | `/v1/auth/register` | Create account |
 | `POST` | `/v1/auth/login` | JWT bearer token |
 | `GET` | `/v1/auth/me` | Current user |
@@ -120,6 +121,12 @@ Never expose `PLUGGY_CLIENT_SECRET` or `GEMINI_API_KEY` to the browser.
 | `GET` | `/v1/dashboard/transactions/{id}` | Transaction detail |
 | `GET` | `/v1/advisor/queen-tips` | Structured financial diagnosis |
 | `POST` | `/v1/chat/query` | Ask the Gold Queen (cached, rate limited) |
+
+`gold-queen-web` does not read `/health`. Render's health check stays on `/health` (no `?db=1` and no `?deep=1`). The keep-alive workflow is the caller that sends `?db=1`.
+
+Every response also sends `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, and `Strict-Transport-Security: max-age=31536000; includeSubDomains`. HSTS is always sent: browsers ignore that header on plain HTTP, so local `http://127.0.0.1` stays usable and the HTTPS host on Render is covered without an environment switch. There is no `Content-Security-Policy`, so `/docs` (Swagger UI) keeps working. CORS is unchanged and still allows only the configured web origins, including `https://gold-queen-web.vercel.app`.
+
+`POST /v1/connections/connect` and `POST /v1/connections/sync` are synchronous handlers. FastAPI runs them in a worker thread, so the SQLAlchemy session and Gemini's blocking client (30s timeout, `time.sleep` on retries) do not stall the process event loop. Pluggy calls stay async and are scheduled back onto that loop.
 
 Full contracts: [docs/frontend-integration.md](docs/frontend-integration.md) · Architecture: [docs/architecture.md](docs/architecture.md)
 

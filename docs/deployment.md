@@ -116,7 +116,8 @@ Two failure modes look identical from the outside and are worth ruling out first
 
 ## Post-deploy checklist
 
-- [ ] `GET /health` returns `pluggy_live: true` and `ai_live: true`
+- [ ] `GET /health` returns `pluggy_live: true` and `ai_live: true` and does not call Gemini. Leave the Render health check path on `/health` (do not point it at `?db=1` or `?deep=1`).
+- [ ] `GET /health?deep=1` returns `ai_provider` when you want to probe Gemini. `GET /health?db=1` is only for the keep-alive workflow.
 - [ ] `POST /v1/auth/login` works with a seeded demo user
 - [ ] `POST /v1/connections/connect` as the demo user returns `403` / `demo_read_only`
 - [ ] `ALLOW_REGISTRATION` is unset or `false` on the live service, unless public signup should be open
