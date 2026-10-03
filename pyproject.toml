@@ -63,6 +63,9 @@ testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
 asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+]
 
 [tool.mypy]
 python_version = "3.11"
