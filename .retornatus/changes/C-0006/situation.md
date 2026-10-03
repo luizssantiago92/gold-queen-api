@@ -72,3 +72,7 @@ Agents and humans express intent. Retornatus owns structure.
 ## Agent narrative
 
 The repository is a FastAPI portfolio API. Root PRD.md is marked historical. pyproject.toml version is 1.0.0 and app/__init__.py reads that value for OpenAPI. Retornatus 1.9.1 treats a pyproject.toml diff as code, so this Change exists to satisfy the omission gate.
+
+## Reopened Situation
+
+DONE lines for the license and the changelog now say documented so Assurance asks for a repository observation.

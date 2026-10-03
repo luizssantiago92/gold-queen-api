@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0006/E-003",
+  "type": "repository_observation",
+  "subject": "CHANGELOG.md",
+  "source": "CHANGELOG.md",
+  "producer": "agent",
+  "observed_at": "2026-10-03T15:03:26.157408Z",
+  "subject_state": "commit:06f906a1ce7377b6e63d7ad0fed29acd050b10e6",
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0006/claim-done-3",
+      "note": null
+    }
+  ]
+}
