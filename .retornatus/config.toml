@@ -1,0 +1,143 @@
+schema_version = 1
+
+[retornatus]
+version = "1.9.1"
+
+[project]
+initialized = true
+preset = "fastapi"
+
+[[assurance.required_checks]]
+name = "pytest"
+run = [
+    "uv",
+    "run",
+    "pytest",
+    "-q",
+]
+types = [
+    "test_result",
+]
+
+[[assurance.required_checks]]
+name = "ruff"
+run = [
+    "uv",
+    "run",
+    "ruff",
+    "check",
+    "src",
+    "app",
+    "tests",
+]
+types = [
+    "lint_result",
+]
+
+[[assurance.required_checks]]
+name = "mypy"
+run = [
+    "uv",
+    "run",
+    "mypy",
+]
+types = [
+    "lint_result",
+]
+
+[governance.scope]
+code_globs = [
+    "src/**",
+    "app/**",
+    "tests/**",
+    "routers/**",
+    "api/**",
+    "schemas/**",
+    "alembic/**",
+]
+
+[surfaces.ship]
+note_subject = "ship rollback"
+globs = [
+    "**/Dockerfile",
+    "**/docker-compose*.y*ml",
+    "**/*.tf",
+    "**/terraform/**",
+    "**/charts/**",
+    "**/helm/**",
+    "**/.github/workflows/**",
+    "alembic/**",
+    "**/alembic/**",
+]
+
+[surfaces.ai]
+note_subject = "ai fallback"
+globs = [
+    "**/prompts/**",
+    "**/mcp/**",
+    "**/evals/**",
+    "**/tests/eval/**",
+    "**/*llm*",
+    "**/*rag*",
+    "**/*embed*",
+]
+run = [
+    "uv",
+    "run",
+    "pytest",
+    "tests/eval",
+    "-m",
+    "not live",
+]
+# Suggested commands. verify uses these argv values when the matching
+# paths are part of the Change and [[surfaces.ship.checks]] is omitted.
+# Uncomment the ship tables to replace the packaged defaults entirely.
+# Structural checks only: not a plan review, and not an AppSec audit.
+# Eval quality is the team's job; verify only requires the command ran.
+# optional = true covers the path and still requires the rollback note.
+# verify does not require that command to have been executed.
+# AI eval default (also set as surfaces.ai.run): uv run pytest tests/eval -m not live
+#
+# [[surfaces.ship.checks]]
+# name = "docker"
+# globs = ["**/Dockerfile"]
+# run = ["docker", "build", "."]
+#
+# [[surfaces.ship.checks]]
+# name = "compose"
+# globs = ["**/docker-compose*.y*ml"]
+# run = ["docker", "compose", "config", "--quiet"]
+#
+# [[surfaces.ship.checks]]
+# name = "terraform"
+# globs = ["**/*.tf", "**/terraform/**"]
+# run = ["terraform", "validate"]
+#
+# [[surfaces.ship.checks]]
+# name = "helm"
+# globs = ["**/charts/**", "**/helm/**"]
+# run = ["helm", "template", "."]
+#
+# [[surfaces.ship.checks]]
+# name = "workflows"
+# globs = ["**/.github/workflows/**"]
+# run = ["actionlint"]
+#
+# [[surfaces.ship.checks]]
+# name = "alembic"
+# optional = true
+# globs = ["alembic/**", "**/alembic/**"]
+# run = ["uv", "run", "alembic", "check"]
+#
+# Suggested evidence commands. Not required_checks.
+# Commented because the tool or the import path may be absent.
+#
+# httpx: pytest with httpx TestClient or ASGITransport. httpx may be absent. This is the inherited pytest command, not an extra required check.
+# run = ["uv", "run", "pytest", "-q"]
+#
+# openapi: Example OpenAPI export. The import path is project-specific (app.main here). Write the JSON and diff it in review. Not a required check.
+# run = ["uv", "run", "python", "-c", "import json; from app.main import app; print(json.dumps(app.openapi()))"]
+#
+# alembic-sql: Optional alternative to alembic check. Prints upgrade SQL and does not apply it. alembic may be absent.
+# run = ["uv", "run", "alembic", "upgrade", "head", "--sql"]
+

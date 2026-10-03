@@ -4,12 +4,12 @@
 
 ## 1. Identificação do Repositório
 * **Nome do Repositório:** `gold-queen-api`
-* **Descrição do Repositório:** *"RESTful API for Open Finance data aggregation, automated transaction categorization, and medieval-themed financial AI advisor using FastAPI, PostgreSQL, and Spec-Guardrails."*
+* **Descrição do Repositório:** *"RESTful API for Open Finance data aggregation, automated transaction categorization, and medieval-themed financial AI advisor using FastAPI and PostgreSQL."*
 
 ---
 
 ## 2. Visão Geral do Produto
-O **Gold Queen API** é o motor de back-end responsável por conectar bancos via Open Finance (Pluggy Sandbox), unificar e categorizar transações de até 3 contas bancárias ativas (limitadas na regra de negócio para simular o modelo Freemium de mercado), validar a inferência da IA utilizando a biblioteca `spec-guardrails`, gerar análises ativas de educação financeira (*Dicas da Rainha*) e responder a dúvidas do usuário através da persona **Gold Queen** (a Rainha da Era Medieval e Mestre da Moeda) com controle estrito de uso (Rate Limiting por tokens).
+O **Gold Queen API** é o motor de back-end responsável por conectar bancos via Open Finance (Pluggy Sandbox), unificar e categorizar transações de até 3 contas bancárias ativas (limitadas na regra de negócio para simular o modelo Freemium de mercado), validar a inferência da IA com schema Pydantic (`app/core/ai_guardrails.py`), gerar análises ativas de educação financeira (*Dicas da Rainha*) e responder a dúvidas do usuário através da persona **Gold Queen** (a Rainha da Era Medieval e Mestre da Moeda) com controle estrito de uso (Rate Limiting por tokens).
 
 ---
 
@@ -20,7 +20,7 @@ O **Gold Queen API** é o motor de back-end responsável por conectar bancos via
 * **ORM:** SQLModel (SQLAlchemy + Pydantic v2)
 * **Open Finance SDK/Client:** Pluggy Sandbox API
 * **Engine de IA:** Google GenAI SDK (`gemini-1.5-flash`)
-* **Validação de IA:** `spec-guardrails` (Biblioteca própria de resiliência e validação)
+* **Validação de IA:** schema Pydantic no repositório (`app/core/ai_guardrails.py`)
 * **Otimização de Custos & Cache:** In-Memory Cache (`functools.lru_cache`) para reutilizar análises e respostas de perguntas idênticas no mesmo dia sem consumir tokens adicionais.
 * **Rate Limiting:** Token Bucket (Max 10 interações/dia por usuário para custo $0.00)
 
@@ -35,7 +35,7 @@ O **Gold Queen API** é o motor de back-end responsável por conectar bancos via
 ### RF02 - Agregação e Categorização de Gastos com Guardrails
 * Leitura de extrato do Pluggy Sandbox.
 * Envio de transações não categorizadas para a IA (Gemini).
-* Aplicação obrigatória da `spec-guardrails` para garantir que `category`, `amount` e `date` venham estritamente no schema correto sem alucinações.
+* Aplicação obrigatória de schema Pydantic (`app/core/ai_guardrails.py`) para garantir que `category`, `amount` e `date` venham estritamente no schema correto sem alucinações.
 * Retorno de uma flag booleana (`is_guarded: true`) em cada transação para auditoria visual na interface.
 * Persistência no PostgreSQL.
 
@@ -69,7 +69,7 @@ O **Gold Queen API** é o motor de back-end responsável por conectar bancos via
 
 Para a execução com maestria deste repositório, o agente deve consultar:
 1. **Documentação da API da Pluggy:** Estudar a criação de Connect Tokens e o endpoint `/transactions`.
-2. **Repositório Spec-Guardrails:** Consultar https://github.com/luizssantiago92/spec-guardrails para entender os decoradores e validadores de schema JSON para LLM.
+2. **Retornatus:** Consultar https://github.com/luizssantiago92/retornatus para a governança do trabalho do agente. A validação de schema da IA fica em `app/core/ai_guardrails.py`.
 3. **FastAPI & SQLModel:** Boas práticas de injeção de dependência e rotas assíncronas.
 
 ---
@@ -83,4 +83,3 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Instalar dependências essenciais
 pip install fastapi uvicorn sqlmodel psycopg2-binary python-dotenv google-genai requests
-pip install git+[https://github.com/luizssantiago92/spec-guardrails.git](https://github.com/luizssantiago92/spec-guardrails.git)
