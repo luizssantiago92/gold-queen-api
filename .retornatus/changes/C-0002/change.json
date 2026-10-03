@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0002",
+  "title": "Pin Actions, Dependabot, and CodeQL",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Harden GitHub Actions: pin third-party actions to full commit SHAs, least-privilege permissions, cancel stale pull-request runs, enforce a measured coverage floor, add weekly Dependabot for pip and github-actions, and add CodeQL for Python and Actions.",
+    "kind": "SECURITY"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-03T06:25:02.988419Z"
+}
