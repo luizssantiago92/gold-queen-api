@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0005/E-008",
+  "type": "repository_observation",
+  "subject": "pytest shows OpenAPI tags have descriptions, routes have summaries, error respon",
+  "source": "docs/frontend-integration.md and app/__init__.py",
+  "producer": "agent",
+  "observed_at": "2026-10-03T14:42:57.056636Z",
+  "subject_state": "commit:982c31d7adb941288bc89c259ea7248195c0b844",
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0005/claim-done-3",
+      "note": null
+    }
+  ]
+}
