@@ -40,10 +40,10 @@ Agents and humans express intent. Retornatus owns structure.
 - Repo: health endpoint symbols already present in app/main.py
 - Repo: Retornatus already initialized
 - Situation narrative provided by agent/human
-- Proposed WHAT: Rewrite README.md in English for a backend recruiter using only behavior present in the code and the current docs. Add an MIT LICENSE for Luiz Santiago in 2026 and a Keep a Changelog with an empty Unreleased section and a 0.1.0 section dated 2026-10-03. Move the root PRD into docs/history and fix links that pointed at it. Add license, authors, readme, and project URLs to pyproject.toml without changing version 1.0.0.
+- Proposed WHAT: Rewrite README.md in English for a backend recruiter using only behavior present in the code and the current docs. Add an MIT LICENSE for Luiz Santiago in 2026 and a Keep a Changelog with an empty Unreleased section and a 1.0.0 section dated 2026-10-03. Move the root PRD into docs/history and fix links that pointed at it. Add license, authors, readme, and project URLs to pyproject.toml without changing version 1.0.0.
 - DONE criterion: The file "README.md" documents the live web app, the API docs, and both demo account emails.
 - DONE criterion: The file "LICENSE" documents an MIT copyright for Luiz Santiago in 2026.
-- DONE criterion: The file "CHANGELOG.md" documents version 0.1.0 dated 2026-10-03 and contains an empty Unreleased section.
+- DONE criterion: The file "CHANGELOG.md" documents version 1.0.0 dated 2026-10-03 and contains an empty Unreleased section.
 - DONE criterion: The history document "PRD.md" exists under the docs history directory and the repository root no longer contains that file.
 - DONE criterion: The file "pyproject.toml" documents license, authors, readme, and project urls, and its version field stays 1.0.0.
 
@@ -76,3 +76,7 @@ The repository is a FastAPI portfolio API. Root PRD.md is marked historical. pyp
 ## Reopened Situation
 
 DONE lines for the license and the changelog now say documented so Assurance asks for a repository observation.
+
+## Reopened Situation
+
+The changelog entry is 1.0.0, the same version pyproject.toml and OpenAPI already publish.
