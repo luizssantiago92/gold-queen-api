@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0006",
+  "title": "Recruiter README, MIT license, and changelog",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Publish a recruiter-facing README, an MIT license, and a changelog, archive the historical product brief, and record project metadata. The package version in pyproject.toml is 1.0.0 and stays 1.0.0 because OpenAPI reads it.",
+    "kind": "MAINTENANCE"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 3,
+  "relations": [],
+  "created_at": "2026-10-03T14:59:40.130175Z"
+}

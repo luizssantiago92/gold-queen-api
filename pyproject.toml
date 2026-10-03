@@ -3,6 +3,9 @@ name = "gold-queen-api"
 version = "1.0.0"
 description = "Open Finance aggregation API for the Gold Queen prototype."
 requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Luiz Santiago" }]
 dependencies = [
     "fastapi==0.142.2",
     "starlette==1.7.0",
@@ -18,6 +21,12 @@ dependencies = [
     "httpx==0.28.1",
     "python-multipart==0.0.32",
 ]
+
+[project.urls]
+Homepage = "https://gold-queen-web.vercel.app"
+Repository = "https://github.com/luizssantiago92/gold-queen-api"
+Documentation = "https://gold-queen-api.onrender.com/docs"
+Changelog = "https://github.com/luizssantiago92/gold-queen-api/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

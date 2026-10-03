@@ -10,6 +10,7 @@ Technical documentation for the Gold Queen backend. Start with the [repository R
 | [frontend-integration.md](frontend-integration.md) | Frontend devs | Auth, JSON contracts, errors, TanStack Query keys |
 | [deployment.md](deployment.md) | DevOps | Supabase, Render, environment variables, CORS |
 | [demo-operations.md](demo-operations.md) | Demo / portfolio | Seeding users, linking sandbox banks, date refresh |
+| [history/PRD.md](history/PRD.md) | Archive | Original product brief. Current behavior is the README and the guides above |
 
 ## Quick links
 
