@@ -44,10 +44,10 @@ The API returns more than one error shape. Request validation echoes the submitt
 - Prefer pytest for automated verification (inferred from repo)
 - Do not echo submitted field values, input, or ctx in error bodies or logs.
 - Auth failures stay fail-closed and keep their current detail strings.
-- Do not add noqa or type ignore comments.
+- Do not silence the linter or the type checker with inline markers.
 - Do not change the Portuguese 429 quota message.
 - Do not add dependencies.
-- No secrets in logs and no submitted passwords in error bodies. Auth failures stay fail-closed. Do not add noqa or type ignore comments. Do not change existing domain detail strings or the Portuguese 429 message. Do not add dependencies.
+- No secrets in logs and no submitted passwords in error bodies. Auth failures stay fail-closed. Do not silence the linter or the type checker with inline markers. Do not change existing domain detail strings or the Portuguese 429 message. Do not add dependencies.
 
 ## Assumptions
 
