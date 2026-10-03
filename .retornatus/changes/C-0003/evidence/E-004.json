@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "C-0003/E-004",
+  "type": "test_result",
+  "subject": "pytest shows nosniff, HSTS, no-referrer, and DENY frame headers and returns acce",
+  "source": "pytest",
+  "producer": "retornatus",
+  "observed_at": "2026-10-03T10:35:27.100156Z",
+  "subject_state": "commit:da86d5e07418cd50f984db2f84f738fd9a87ac2c",
+  "provenance": "executed",
+  "command": [
+    "uv",
+    "run",
+    "pytest",
+    "-q"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-10-03T10:35:02.104096Z",
+  "ended_at": "2026-10-03T10:35:26.784132Z",
+  "duration_ms": 24680,
+  "output_sha256": "510dbcc9bac0aaf18999e436f10eece4b78270520cf0bf35c74ed8b8e40a09a0",
+  "output_tail": "........................................................................ [ 58%]\n...................................................                      [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854\n  /workspace/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13\n    from crypt import crypt as _crypt\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n",
+  "output_artifact": ".retornatus/changes/C-0003/evidence/E-004.output.txt",
+  "git_commit": "da86d5e07418cd50f984db2f84f738fd9a87ac2c",
+  "worktree_dirty": false,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0003/claim-done-4",
+      "note": null
+    }
+  ]
+}
