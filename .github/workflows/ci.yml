@@ -25,7 +25,13 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Lint
-        run: ruff check app tests
+        run: ruff check app tests scripts alembic
+
+      - name: Format
+        run: ruff format --check .
+
+      - name: Type check
+        run: mypy
 
       - name: Audit dependencies
         # Audit the project requirements only. A bare `pip-audit` also scans
