@@ -150,7 +150,8 @@ class AIEngine:
         )
         prompt = (
             "Categorize each bank transaction below.\n"
-            f"Allowed categories (use exactly one of these): {', '.join(ALLOWED_CATEGORIES)}.\n"
+            "Allowed categories (use exactly one of these): "
+            f"{', '.join(ALLOWED_CATEGORIES)}.\n"
             "Answer ONLY with JSON in the form "
             '{"results": [{"transaction_id": "...", "category": "..."}]}.\n\n'
             f"Transactions:\n{listing}"
@@ -285,7 +286,8 @@ def _fallback_chat(question: str, locale: Locale) -> str:
         return (
             "Nobre subdito, os conselheiros do reino estao em concilio e a magia dos "
             "oraculos encontra-se temporariamente indisponivel. Enquanto aguardais, "
-            "lembrai-vos: gastai menos do que arrecadais e o vosso tesouro jamais mingua. "
+            "lembrai-vos: gastai menos do que arrecadais e o vosso tesouro "
+            "jamais mingua. "
             f"Retornai em breve para tratarmos de '{trimmed}'."
         )
     return (

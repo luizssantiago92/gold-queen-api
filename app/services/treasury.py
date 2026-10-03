@@ -138,7 +138,10 @@ def month_totals(session: Session, user_id: int) -> tuple[Decimal, Decimal]:
 def expenses_by_category(
     session: Session, user_id: int
 ) -> dict[str, tuple[Decimal, int]]:
-    """Return ``display_category -> (total_expense, transaction_count)`` for this month."""
+    """Return ``display_category -> (total_expense, transaction_count)``.
+
+    Totals cover the current calendar month.
+    """
     start, end = month_bounds()
     breakdown: dict[str, tuple[Decimal, int]] = {}
     for transaction, account, _ in user_transaction_rows(session, user_id, start, end):
@@ -213,8 +216,10 @@ def build_ai_summary(session: Session, user_id: int) -> str:
     reference = date.today().strftime("%Y-%m")
     return (
         "Product rules (authoritative, never contradict them):\n"
-        f"- The free plan allows up to {settings.max_bank_connections} bank connections.\n"
-        f"- The user may ask the Gold Queen {settings.chat_daily_limit} questions per day.\n"
+        f"- The free plan allows up to {settings.max_bank_connections} bank "
+        "connections.\n"
+        f"- The user may ask the Gold Queen {settings.chat_daily_limit} "
+        "questions per day.\n"
         "\n"
         f"Reference month: {reference}\n"
         f"Total balance across banks: R$ {balance}\n"

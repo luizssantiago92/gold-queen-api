@@ -19,7 +19,8 @@ QUEEN_QUOTA_MESSAGES: dict[Locale, str] = {
         "Return in 24 hours for new counsel about your gold."
     ),
     "pt": (
-        "A Rainha precisa recolher-se aos seus aposentos para balancear o tesouro real. "
+        "A Rainha precisa recolher-se aos seus aposentos para balancear "
+        "o tesouro real. "
         "Retorne em 24 horas para novos conselhos sobre o seu ouro."
     ),
 }
