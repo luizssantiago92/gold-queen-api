@@ -2,9 +2,10 @@
 
 from datetime import date
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUser, SessionDep
+from app.core.exceptions import NotFoundError
 from app.models.entities import Account, BankConnection, Transaction, require_id
 from app.schemas.dashboard import (
     BankBalance,
@@ -17,10 +18,13 @@ from app.schemas.dashboard import (
     TransactionPage,
     TransactionResponse,
 )
+from app.schemas.errors import error_responses
 from app.services import treasury
 from app.services.demo_refresh import maybe_refresh_demo
 
 router = APIRouter(prefix="/v1/dashboard", tags=["dashboard"])
+
+_AUTH = error_responses((401, "The bearer token is missing or invalid."))
 
 
 def _refresh_demo_if_needed(session: SessionDep, current_user: CurrentUser) -> None:
@@ -45,7 +49,16 @@ def _transaction_response(
     )
 
 
-@router.get("/overview", response_model=OverviewResponse)
+@router.get(
+    "/overview",
+    response_model=OverviewResponse,
+    summary="Consolidated balance",
+    description=(
+        "Return the total balance, each bank share, and this month's "
+        "income and expenses."
+    ),
+    responses=_AUTH,
+)
 def overview(current_user: CurrentUser, session: SessionDep) -> OverviewResponse:
     user_id = require_id(current_user.id)
     _refresh_demo_if_needed(session, current_user)
@@ -77,7 +90,13 @@ def overview(current_user: CurrentUser, session: SessionDep) -> OverviewResponse
     )
 
 
-@router.get("/categories", response_model=CategoriesResponse)
+@router.get(
+    "/categories",
+    response_model=CategoriesResponse,
+    summary="Spending by category",
+    description="Return this month's expenses grouped into display categories.",
+    responses=_AUTH,
+)
 def categories(current_user: CurrentUser, session: SessionDep) -> CategoriesResponse:
     user_id = require_id(current_user.id)
     _refresh_demo_if_needed(session, current_user)
@@ -102,7 +121,13 @@ def categories(current_user: CurrentUser, session: SessionDep) -> CategoriesResp
     )
 
 
-@router.get("/monthly-series", response_model=MonthlySeriesResponse)
+@router.get(
+    "/monthly-series",
+    response_model=MonthlySeriesResponse,
+    summary="Daily expense series",
+    description="Return cumulative expenses for each elapsed day of the current month.",
+    responses=_AUTH,
+)
 def monthly_series(
     current_user: CurrentUser, session: SessionDep
 ) -> MonthlySeriesResponse:
@@ -122,7 +147,16 @@ def monthly_series(
     )
 
 
-@router.get("/transactions", response_model=TransactionPage)
+@router.get(
+    "/transactions",
+    response_model=TransactionPage,
+    summary="List transactions",
+    description="Return the current month's transactions, newest first.",
+    responses=error_responses(
+        (401, "The bearer token is missing or invalid."),
+        (422, "page or limit is out of range."),
+    ),
+)
 def transactions(
     current_user: CurrentUser,
     session: SessionDep,
@@ -148,7 +182,17 @@ def transactions(
     )
 
 
-@router.get("/transactions/{transaction_id}", response_model=TransactionDetailResponse)
+@router.get(
+    "/transactions/{transaction_id}",
+    response_model=TransactionDetailResponse,
+    summary="Read one transaction",
+    description="Return one transaction when it belongs to the current user.",
+    responses=error_responses(
+        (401, "The bearer token is missing or invalid."),
+        (404, "No transaction with this id belongs to the current user."),
+        (422, "The transaction id was not an integer."),
+    ),
+)
 def transaction_detail(
     transaction_id: int,
     current_user: CurrentUser,
@@ -159,7 +203,7 @@ def transaction_detail(
 
     row = treasury.get_transaction_for_user(session, user_id, transaction_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Transaction not found.")
+        raise NotFoundError("Transaction not found.")
 
     transaction, account, connection = row
     base = _transaction_response(transaction, account, connection)

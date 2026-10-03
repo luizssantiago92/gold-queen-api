@@ -12,6 +12,7 @@ from app.schemas.connections import (
     SyncRequest,
     SyncResponse,
 )
+from app.schemas.errors import error_responses
 from app.services import sync as sync_service
 from app.services.demo_access import ensure_not_demo
 from app.services.treasury import user_connections
@@ -19,12 +20,29 @@ from app.services.treasury import user_connections
 router = APIRouter(prefix="/v1/connections", tags=["connections"])
 
 
-@router.get("", response_model=list[ConnectionResponse])
+@router.get(
+    "",
+    response_model=list[ConnectionResponse],
+    summary="List linked banks",
+    description="Return the banks linked to the current user.",
+    responses=error_responses((401, "The bearer token is missing or invalid.")),
+)
 def list_connections(current_user: CurrentUser, session: SessionDep):
     return user_connections(session, require_id(current_user.id))
 
 
-@router.post("/connect", response_model=ConnectTokenResponse)
+@router.post(
+    "/connect",
+    response_model=ConnectTokenResponse,
+    summary="Create a connect token",
+    description=(
+        "Issue a short-lived Pluggy connect token when the Free plan quota allows it."
+    ),
+    responses=error_responses(
+        (401, "The bearer token is missing or invalid."),
+        (403, "The demo is read-only or the Free plan bank limit is reached."),
+    ),
+)
 def create_connect_token(
     current_user: CurrentUser,
     session: SessionDep,
@@ -47,7 +65,18 @@ def create_connect_token(
     )
 
 
-@router.delete("/{connection_id}", status_code=204)
+@router.delete(
+    "/{connection_id}",
+    status_code=204,
+    summary="Unlink a bank",
+    description="Delete one bank and the accounts and transactions that came from it.",
+    responses=error_responses(
+        (401, "The bearer token is missing or invalid."),
+        (403, "The public demo account is read-only."),
+        (404, "No bank with this id belongs to the current user."),
+        (422, "The connection id was not an integer."),
+    ),
+)
 def delete_connection(
     connection_id: int,
     current_user: CurrentUser,
@@ -62,7 +91,19 @@ def delete_connection(
     )
 
 
-@router.post("/sync", response_model=SyncResponse)
+@router.post(
+    "/sync",
+    response_model=SyncResponse,
+    summary="Sync a bank",
+    description="Pull accounts and transactions for a Pluggy item and categorize them.",
+    responses=error_responses(
+        (401, "The bearer token is missing or invalid."),
+        (403, "The demo is read-only or the Free plan bank limit is reached."),
+        (404, "No bank with this item belongs to the current user."),
+        (422, "The body failed validation."),
+        (502, "Pluggy or categorization upstream failed."),
+    ),
+)
 def sync_connection(
     payload: SyncRequest,
     current_user: CurrentUser,

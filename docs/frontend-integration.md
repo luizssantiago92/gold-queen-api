@@ -197,10 +197,34 @@ Use `remaining_requests` to display the remaining audiences with the Queen.
 
 ## Error handling
 
-Every handled error returns the same shape:
+Every handled error returns the same shape. `detail` is always a string. `code` is always a string. `errors` appears only on `422`, and each item has only `loc`, `msg`, and `type`.
 
 ```json
 { "detail": "human readable message", "code": "machine_readable_code" }
+```
+
+Validation (`422`):
+
+```json
+{
+  "detail": "Request validation failed",
+  "code": "validation_error",
+  "errors": [
+    {
+      "loc": ["body", "password"],
+      "msg": "String should have at least 8 characters",
+      "type": "string_too_short"
+    }
+  ]
+}
+```
+
+The body never includes `input`, `ctx`, or the value the client sent. A rejected password does not appear anywhere in the JSON.
+
+An unexpected failure is `500` with no traceback:
+
+```json
+{ "detail": "Internal server error", "code": "internal_error" }
 ```
 
 | Status | Code | Frontend behaviour |
@@ -209,11 +233,17 @@ Every handled error returns the same shape:
 | `403` | `connection_limit_reached` | Show the Free plan limit message |
 | `403` | `demo_read_only` | The public demo cannot connect, sync, or delete a bank |
 | `403` | `registration_disabled` | Public signup is closed |
+| `404` | `not_found` | Missing bank or transaction. `detail` stays "Bank connection not found." or "Transaction not found." |
 | `409` | `conflict` | Email already registered |
+| `422` | `validation_error` | Show `detail`. Field messages are in `errors`, without the submitted value |
 | `429` | `rate_limit_reached` | Show the Queen's quota speech bubble |
+| `429` | `login_rate_limited` | Login is temporarily locked. Honor `Retry-After` |
+| `500` | `internal_error` | Generic failure. Ask the user to retry |
 | `502` | `upstream_error` | Ask the user to retry the sync |
 
-For `429`, `detail` already carries the in-persona text:
+`detail` strings the web already shows are unchanged, including the Portuguese quota text. `gold-queen-web` `errorMessage` uses `detail` only when it is a string, so a `422` now shows "Request validation failed" instead of the generic fallback. No web change is required. `WWW-Authenticate` is kept when a `401` already set it. `Retry-After` is kept on a locked login.
+
+For the Queen quota `429`, `detail` already carries the in-persona text:
 
 > A Rainha precisa recolher-se aos seus aposentos para balancear o tesouro real. Retorne em 24 horas para novos conselhos sobre o seu ouro.
 
