@@ -1,4 +1,4 @@
-"""RF04 - Queen's Tips: proactive financial diagnosis."""
+"""Queen's Tips: a daily treasury diagnosis with a summary cache and a shared quota."""
 
 import hashlib
 from datetime import date
@@ -11,6 +11,7 @@ from app.api.deps import AIDep, CurrentUser, SessionDep
 from app.core.locale import DEFAULT_LOCALE, Locale, parse_accept_language, parse_locale
 from app.models.entities import ChatCache, require_id
 from app.schemas.advisor import QueenTipsResponse
+from app.schemas.errors import error_responses
 from app.services import rate_limit, treasury
 from app.services.demo_access import demo_quota_subject
 
@@ -19,7 +20,20 @@ router = APIRouter(prefix="/v1/advisor", tags=["advisor"])
 _TIPS_CACHE_KEY = "queen-tips"
 
 
-@router.get("/queen-tips", response_model=QueenTipsResponse)
+@router.get(
+    "/queen-tips",
+    response_model=QueenTipsResponse,
+    summary="Queen's Tips",
+    description=(
+        "Return today's diagnosis. A cached result for the same treasury "
+        "summary spends no quota."
+    ),
+    responses=error_responses(
+        (401, "The bearer token is missing or invalid."),
+        (422, "locale is not a supported language."),
+        (429, "The shared daily Queen quota is exhausted."),
+    ),
+)
 def queen_tips(
     current_user: CurrentUser,
     session: SessionDep,
@@ -28,10 +42,17 @@ def queen_tips(
     locale: Annotated[Locale, Query()] = DEFAULT_LOCALE,
     accept_language: str | None = Header(default=None, alias="Accept-Language"),
 ) -> QueenTipsResponse:
+    """Return today's Queen's Tips for the signed-in treasury.
+
+    The language comes from the locale query when it is set, otherwise from
+    Accept-Language. A same-day cache hit is keyed by the treasury summary,
+    so a repeat of the same summary spends no model call and no daily quota.
+    Tips the guardrail rejects are not cached. The call shares that quota
+    with chat. Demo visitors are counted per IP.
+    """
     resolved_locale = (
         parse_locale(locale) if locale else parse_accept_language(accept_language)
     )
-    """Return today's diagnosis, reusing the cached one to spend zero extra tokens."""
     user_id = require_id(current_user.id)
     subject_key = demo_quota_subject(current_user, request)
     summary = treasury.build_ai_summary(session, user_id)

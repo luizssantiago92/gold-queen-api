@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0005",
+  "title": "Consistent error contract and polished OpenAPI",
+  "demand": {
+    "schema_version": 1,
+    "statement": "The API returns more than one error shape. Request validation echoes the submitted input, including passwords, and has no machine-readable code. HTTPException responses omit code. Dashboard transaction lookup raises a handmade 404. Unexpected errors can leak a traceback. OpenAPI tags, summaries, error responses, and examples are thin. The API version is copied in more than one place. The advisor queen-tips docstring is outdated. gold-queen-web depends on the existing detail strings, Portuguese 429 text, and headers such as Retry-After and WWW-Authenticate.",
+    "kind": "BEHAVIOR"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-03T14:32:38.470758Z"
+}

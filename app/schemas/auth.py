@@ -2,12 +2,24 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.core.security import BCRYPT_MAX_PASSWORD_BYTES
 
 
 class RegisterRequest(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "email": "queen@goldqueen.dev",
+                    "display_name": "Gold Queen",
+                    "password": "QueenDemo123!",
+                }
+            ]
+        }
+    )
+
     email: EmailStr
     display_name: str = Field(min_length=2, max_length=80)
     # max_length counts characters. bcrypt's limit is 72 UTF-8 bytes, so a
@@ -23,6 +35,17 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "email": "queen@goldqueen.dev",
+                    "password": "QueenDemo123!",
+                }
+            ]
+        }
+    )
+
     email: EmailStr
     password: str
 

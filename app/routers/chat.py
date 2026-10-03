@@ -10,6 +10,7 @@ from app.api.deps import AIDep, CurrentUser, SessionDep
 from app.core.config import get_settings
 from app.models.entities import ChatCache, require_id
 from app.schemas.advisor import ChatRequest, ChatResponse
+from app.schemas.errors import error_responses
 from app.services import rate_limit, treasury
 from app.services.chat_scope import is_chat_in_scope, off_topic_reply
 from app.services.demo_access import demo_quota_subject
@@ -21,7 +22,17 @@ def _normalize(question: str) -> str:
     return " ".join(question.lower().split())
 
 
-@router.post("/query", response_model=ChatResponse)
+@router.post(
+    "/query",
+    response_model=ChatResponse,
+    summary="Ask the Queen",
+    description="Answer one treasury question and report the remaining daily quota.",
+    responses=error_responses(
+        (401, "The bearer token is missing or invalid."),
+        (422, "The question failed validation."),
+        (429, "The shared daily Queen quota is exhausted."),
+    ),
+)
 def query(
     payload: ChatRequest,
     current_user: CurrentUser,

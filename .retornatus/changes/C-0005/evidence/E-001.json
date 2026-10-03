@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "C-0005/E-001",
+  "type": "test_result",
+  "subject": "pytest shows a 422 body has string detail and code validation_error, an errors l",
+  "source": "pytest",
+  "producer": "retornatus",
+  "observed_at": "2026-10-03T14:42:47.720587Z",
+  "subject_state": "commit:982c31d7adb941288bc89c259ea7248195c0b844",
+  "provenance": "executed",
+  "command": [
+    "uv",
+    "run",
+    "pytest",
+    "-q"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-10-03T14:42:14.620967Z",
+  "ended_at": "2026-10-03T14:42:43.058412Z",
+  "duration_ms": 28437,
+  "output_sha256": "130d66045c0c858162e68630fa8d11362bfdd192f04082491f5a5caddef5d2ff",
+  "output_tail": "Using CPython 3.12.3 interpreter at: /usr/bin/python3\nCreating virtual environment at: .venv\nDownloading pip (1.7MiB)\nDownloading pygments (1.2MiB)\nDownloading ast-serialize (1.3MiB)\nDownloading psycopg2-binary (4.1MiB)\nDownloading pydantic-core (2.0MiB)\nDownloading ruff (9.9MiB)\nDownloading uvloop (4.3MiB)\nDownloading sqlalchemy (3.3MiB)\nDownloading mypy (14.8MiB)\n Downloaded pygments\n Downloaded ast-serialize\n Downloaded pip\n Downloaded pydantic-core\n Downloaded psycopg2-binary\n Downloaded sqlalchemy\n Downloaded uvloop\n Downloaded ruff\n Downloaded mypy\nInstalled 74 packages in 32ms\n........................................................................ [ 48%]\n........................................................................ [ 97%]\n...                                                                      [100%]\n",
+  "output_artifact": ".retornatus/changes/C-0005/evidence/E-001.output.txt",
+  "git_commit": "982c31d7adb941288bc89c259ea7248195c0b844",
+  "worktree_dirty": false,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0005/claim-done-1",
+      "note": null
+    }
+  ]
+}

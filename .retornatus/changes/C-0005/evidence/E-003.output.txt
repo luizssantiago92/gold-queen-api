@@ -1,0 +1,24 @@
+Using CPython 3.12.3 interpreter at: /usr/bin/python3
+Creating virtual environment at: .venv
+Downloading pip (1.7MiB)
+Downloading pygments (1.2MiB)
+Downloading ast-serialize (1.3MiB)
+Downloading psycopg2-binary (4.1MiB)
+Downloading pydantic-core (2.0MiB)
+Downloading ruff (9.9MiB)
+Downloading uvloop (4.3MiB)
+Downloading sqlalchemy (3.3MiB)
+Downloading mypy (14.8MiB)
+ Downloaded pygments
+ Downloaded ast-serialize
+ Downloaded pip
+ Downloaded pydantic-core
+ Downloaded psycopg2-binary
+ Downloaded sqlalchemy
+ Downloaded uvloop
+ Downloaded ruff
+ Downloaded mypy
+Installed 74 packages in 32ms
+........................................................................ [ 48%]
+........................................................................ [ 97%]
+...                                                                      [100%]

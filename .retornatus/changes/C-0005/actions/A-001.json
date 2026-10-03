@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "C-0005/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "Serve one error body with string detail and string code, plus an optional errors list limited to loc, msg, and type. Handle RequestValidationError, HTTPException, and existing domain errors in one place, drop input and ctx, keep current headers and domain messages, replace the dashboard 404 with NotFoundError, and return a generic internal_error on unexpected failures while logging them. Document tags, summaries, descriptions, error responses, and examples in OpenAPI. Read the API version from one source. Correct the queen-tips docstring. Update the frontend integration guide.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "pytest shows a 422 body has string detail and code validation_error, an errors list of only loc, msg, and type, and does not contain the submitted password or input or ctx",
+    "pytest shows domain errors, HTTP 404, HTTP 405, and an unexpected 500 share the detail and code shape, the 500 body is the generic internal error, and Retry-After and WWW-Authenticate are preserved",
+    "pytest shows OpenAPI tags have descriptions, routes have summaries, error responses use the error schema, register login overview and transaction schemas have examples, and the API version equals the pyproject version",
+    "pytest shows the queen-tips docstring describes the summary-based cache and the shared daily quota"
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0005/T-001",
+      "description": "Add global error handlers and use NotFoundError for a missing transaction",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/core/exceptions.py",
+        "app/routers/dashboard.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0005/T-002",
+      "description": "Publish OpenAPI metadata, one API version, and schema examples",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/main.py",
+        "app/__init__.py",
+        "app/schemas/",
+        "app/routers/"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0005/T-003",
+      "description": "Correct the queen-tips docstring and the frontend error guide",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/routers/advisor.py",
+        "docs/frontend-integration.md"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0005/T-004",
+      "description": "Prove the contract with tests",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "tests/"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}

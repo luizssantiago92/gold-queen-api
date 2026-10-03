@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0005",
+  "version": 1,
+  "what": "Serve one error body with string detail and string code, plus an optional errors list limited to loc, msg, and type. Handle RequestValidationError, HTTPException, and existing domain errors in one place, drop input and ctx, keep current headers and domain messages, replace the dashboard 404 with NotFoundError, and return a generic internal_error on unexpected failures while logging them. Document tags, summaries, descriptions, error responses, and examples in OpenAPI. Read the API version from one source. Correct the queen-tips docstring. Update the frontend integration guide.",
+  "constraints": [
+    "Do not echo submitted field values, input, or ctx in error bodies or logs.",
+    "Auth failures stay fail-closed and keep their current detail strings.",
+    "Do not silence the linter or the type checker with inline markers.",
+    "Do not change the Portuguese 429 quota message.",
+    "Do not add dependencies."
+  ],
+  "done_criteria": [
+    "pytest shows a 422 body has string detail and code validation_error, an errors list of only loc, msg, and type, and does not contain the submitted password or input or ctx",
+    "pytest shows domain errors, HTTP 404, HTTP 405, and an unexpected 500 share the detail and code shape, the 500 body is the generic internal error, and Retry-After and WWW-Authenticate are preserved",
+    "pytest shows OpenAPI tags have descriptions, routes have summaries, error responses use the error schema, register login overview and transaction schemas have examples, and the API version equals the pyproject version",
+    "pytest shows the queen-tips docstring describes the summary-based cache and the shared daily quota"
+  ],
+  "active": true,
+  "activated_at": "2026-10-03T14:36:02.996543Z"
+}

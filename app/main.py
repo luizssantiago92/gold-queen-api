@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from app import __version__
 from app.api.deps import SessionDep
 from app.core.config import get_settings
 from app.core.database import init_db
@@ -21,6 +22,7 @@ from app.routers import (
     connections_router,
     dashboard_router,
 )
+from app.schemas.errors import error_responses
 from app.services.ai import get_ai_engine
 
 
@@ -32,6 +34,34 @@ async def lifespan(_app: FastAPI):
     yield
 
 
+OPENAPI_TAGS: list[dict[str, str]] = [
+    {
+        "name": "auth",
+        "description": "Register, log in, and read the signed-in user.",
+    },
+    {
+        "name": "connections",
+        "description": "Link, sync, and unlink Open Finance banks.",
+    },
+    {
+        "name": "dashboard",
+        "description": "Balances, categories, and transactions for the signed-in user.",
+    },
+    {
+        "name": "advisor",
+        "description": "Daily Queen's Tips for the signed-in treasury.",
+    },
+    {
+        "name": "chat",
+        "description": "Ask the Gold Queen about the treasury.",
+    },
+    {
+        "name": "health",
+        "description": "Liveness probe for the host. The web app does not call it.",
+    },
+]
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
 
@@ -41,7 +71,12 @@ def create_app() -> FastAPI:
             "RESTful API for Open Finance data aggregation, automated transaction "
             "categorization, and a medieval-themed financial AI advisor."
         ),
-        version="1.0.0",
+        version=__version__,
+        contact={
+            "name": "Gold Queen API",
+            "url": "https://github.com/luizssantiago92/gold-queen-api",
+        },
+        openapi_tags=OPENAPI_TAGS,
         lifespan=lifespan,
     )
 
@@ -72,7 +107,16 @@ def create_app() -> FastAPI:
     def root() -> RedirectResponse:
         return RedirectResponse(url="/docs", status_code=307)
 
-    @app.get("/health", tags=["health"])
+    @app.get(
+        "/health",
+        tags=["health"],
+        summary="Liveness probe",
+        description=(
+            "Report process flags. The database is checked only when db=1, "
+            "and Gemini only when deep=1."
+        ),
+        responses=error_responses((422, "db or deep was not a boolean.")),
+    )
     def health(
         session: SessionDep,
         response: Response,

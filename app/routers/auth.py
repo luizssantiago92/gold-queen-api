@@ -19,12 +19,25 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
+from app.schemas.errors import error_responses
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 
 @router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create an account",
+    description=(
+        "Register an email and password and return the new user. "
+        "Public signup can be closed."
+    ),
+    responses=error_responses(
+        (403, "Public signup is closed."),
+        (409, "This email is already registered."),
+        (422, "The body failed validation."),
+    ),
 )
 def register(payload: RegisterRequest, session: SessionDep) -> User:
     if not get_settings().registration_enabled:
@@ -45,7 +58,17 @@ def register(payload: RegisterRequest, session: SessionDep) -> User:
     return user
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Log in",
+    description="Exchange an email and password for a bearer token.",
+    responses=error_responses(
+        (401, "The email or password is wrong."),
+        (422, "The body failed validation."),
+        (429, "Too many login attempts. Retry-After says when to try again."),
+    ),
+)
 def login(
     payload: LoginRequest, session: SessionDep, request: Request
 ) -> TokenResponse:
@@ -60,6 +83,12 @@ def login(
     )
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Read the current user",
+    description="Return the user identified by the bearer token.",
+    responses=error_responses((401, "The bearer token is missing or invalid.")),
+)
 def me(current_user: CurrentUser) -> User:
     return current_user

@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class BankBalance(BaseModel):
@@ -14,6 +14,28 @@ class BankBalance(BaseModel):
 
 
 class OverviewResponse(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "total_balance": "2330.78",
+                    "currency": "BRL",
+                    "banks": [
+                        {
+                            "connection_id": 1,
+                            "institution_name": "Nubank",
+                            "balance": "1430.20",
+                            "share_percentage": 61.36,
+                        }
+                    ],
+                    "month_expenses": "845.10",
+                    "month_income": "3200.00",
+                    "reference_month": "2026-08",
+                }
+            ]
+        }
+    )
+
     total_balance: Decimal
     currency: str
     banks: list[BankBalance]
@@ -47,6 +69,24 @@ class MonthlySeriesResponse(BaseModel):
 
 
 class TransactionResponse(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": 12,
+                    "description": "Padaria do Reino",
+                    "amount": "-42.90",
+                    "transaction_date": "2026-08-24",
+                    "category": "Food",
+                    "display_category": "Food",
+                    "is_guarded": True,
+                    "institution_name": "Pluggy Bank",
+                    "account_name": "Pluggy Bank Checking",
+                }
+            ]
+        }
+    )
+
     id: int
     description: str
     amount: Decimal
@@ -59,11 +99,56 @@ class TransactionResponse(BaseModel):
 
 
 class TransactionDetailResponse(TransactionResponse):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": 12,
+                    "description": "Padaria do Reino",
+                    "amount": "-42.90",
+                    "transaction_date": "2026-08-24",
+                    "category": "Food",
+                    "display_category": "Food",
+                    "is_guarded": True,
+                    "institution_name": "Pluggy Bank",
+                    "account_name": "Pluggy Bank Checking",
+                    "account_type": "BANK",
+                    "created_at": "2026-08-24T12:00:00Z",
+                }
+            ]
+        }
+    )
+
     account_type: str
     created_at: datetime
 
 
 class TransactionPage(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "items": [
+                        {
+                            "id": 12,
+                            "description": "Padaria do Reino",
+                            "amount": "-42.90",
+                            "transaction_date": "2026-08-24",
+                            "category": "Food",
+                            "display_category": "Food",
+                            "is_guarded": True,
+                            "institution_name": "Pluggy Bank",
+                            "account_name": "Pluggy Bank Checking",
+                        }
+                    ],
+                    "page": 1,
+                    "limit": 20,
+                    "total": 38,
+                }
+            ]
+        }
+    )
+
     items: list[TransactionResponse]
     page: int
     limit: int
