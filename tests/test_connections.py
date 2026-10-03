@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 import pytest
@@ -320,43 +321,25 @@ def test_sync_does_not_block_the_event_loop(
 
     monkeypatch.setattr(AIEngine, "categorize", blocking_categorize)
 
-    holder: dict[str, object] = {}
-
-    def run_sync() -> None:
+    # Futures re-raise whatever the request raised, so the test does not
+    # swallow exceptions. release runs on the way out so a timeout cannot
+    # leave categorize waiting.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        sync_future = pool.submit(
+            auth_client.post,
+            "/v1/connections/sync",
+            json={"item_id": ITEM_ALPHA},
+        )
         try:
-            holder["response"] = auth_client.post(
-                "/v1/connections/sync", json={"item_id": ITEM_ALPHA}
-            )
-        except Exception as exc:  # noqa: BLE001 - the assertion reports it
-            holder["error"] = exc
+            assert entered.wait(timeout=3)
+            started = time.perf_counter()
+            root_future = pool.submit(auth_client.get, "/", follow_redirects=False)
+            root = root_future.result(timeout=1)
+            elapsed = time.perf_counter() - started
+        finally:
+            release.set()
+        sync_response = sync_future.result(timeout=3)
 
-    worker = threading.Thread(target=run_sync)
-    worker.start()
-    assert entered.wait(timeout=3)
-
-    root_holder: dict[str, object] = {}
-
-    def run_root() -> None:
-        try:
-            root_holder["response"] = auth_client.get("/", follow_redirects=False)
-        except Exception as exc:  # noqa: BLE001
-            root_holder["error"] = exc
-
-    root_thread = threading.Thread(target=run_root)
-    started = time.perf_counter()
-    root_thread.start()
-    root_thread.join(timeout=1)
-    elapsed = time.perf_counter() - started
-    release.set()
-    worker.join(timeout=3)
-    root_thread.join(timeout=3)
-
-    assert "error" not in holder
-    assert "error" not in root_holder
     assert elapsed < 1
-    root = root_holder["response"]
-    sync_response = holder["response"]
-    assert isinstance(root, httpx.Response)
-    assert isinstance(sync_response, httpx.Response)
     assert root.status_code == 307
     assert sync_response.status_code == 200
