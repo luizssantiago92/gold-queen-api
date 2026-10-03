@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0001/E-009",
+  "type": "review_result",
+  "subject": "A review note covers the CI workflow tool steps.",
+  "source": "Reviewed .github/workflows/ci.yml: added ruff format --check and mypy, and widened ruff check to scripts and alembic. No permissions, secrets, or deploy steps changed. actionlint passed. Alembic revision a630d3c39926 was reformatted only; upgrade and downgrade operations are unchanged.",
+  "producer": "agent",
+  "observed_at": "2026-10-03T05:22:04.933110Z",
+  "subject_state": null,
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0001/claim-done-4",
+      "note": null
+    }
+  ]
+}
