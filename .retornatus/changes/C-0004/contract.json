@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0004",
+  "version": 1,
+  "what": "Pin the PR 9 updates and bcrypt 5.0.0 in requirements.txt and pyproject.toml, remove passlib and types-passlib, hash and verify with bcrypt.hashpw and bcrypt.checkpw, narrow persisted sync ids with require_id, reject registration passwords over 72 bytes, and set RETORNATUS_OMISSION to warn only for Dependabot pull requests whose diff is limited to dependency manifests.",
+  "constraints": [],
+  "done_criteria": [
+    "pytest shows registration rejects a password longer than 72 bytes with status 422 and accepts a password of 72 bytes",
+    "pytest shows a stored passlib bcrypt hash that starts with $2b$ still verifies and hash_password emits a $2b$ hash",
+    "A review note covers the Dependabot omission setting in the Retornatus workflow."
+  ],
+  "active": true,
+  "activated_at": "2026-10-03T11:04:52.608827Z"
+}

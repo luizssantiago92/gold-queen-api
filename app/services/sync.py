@@ -11,7 +11,7 @@ from sqlmodel import Session, col, delete, select
 
 from app.core.config import get_settings
 from app.core.exceptions import ConnectionLimitError, NotFoundError
-from app.models.entities import Account, BankConnection, Transaction
+from app.models.entities import Account, BankConnection, Transaction, require_id
 from app.services.ai import AIEngine
 from app.services.pluggy import PluggyClient
 
@@ -176,18 +176,19 @@ def sync_item(
 
     accounts_synced = 0
     new_transactions: list[Transaction] = []
+    connection_id = require_id(connection.id)
 
     for remote_account in _on_event_loop(pluggy.fetch_accounts, item_id):
         account = session.exec(
             select(Account).where(
-                Account.connection_id == connection.id,
+                Account.connection_id == connection_id,
                 Account.pluggy_account_id == remote_account.account_id,
             )
         ).first()
 
         if account is None:
             account = Account(
-                connection_id=connection.id,
+                connection_id=connection_id,
                 pluggy_account_id=remote_account.account_id,
                 name=remote_account.name,
                 account_type=remote_account.account_type,
@@ -202,11 +203,12 @@ def sync_item(
         session.commit()
         session.refresh(account)
         accounts_synced += 1
+        account_id = require_id(account.id)
 
         known_ids = {
             row.pluggy_transaction_id
             for row in session.exec(
-                select(Transaction).where(Transaction.account_id == account.id)
+                select(Transaction).where(Transaction.account_id == account_id)
             ).all()
         }
 
@@ -217,7 +219,7 @@ def sync_item(
                 continue
             new_transactions.append(
                 Transaction(
-                    account_id=account.id,
+                    account_id=account_id,
                     pluggy_transaction_id=remote_tx.transaction_id,
                     description=remote_tx.description,
                     amount=remote_tx.amount,

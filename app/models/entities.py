@@ -3,7 +3,14 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+from sqlalchemy import DateTime
 from sqlmodel import Field, SQLModel
+
+# SQLModel 0.0.45 maps a plain datetime to TIMESTAMP WITH TIME ZONE.
+# The initial migration created TIMESTAMP WITHOUT TIME ZONE. Keep that
+# storage so this upgrade does not rewrite existing columns. Writers still
+# pass aware UTC values; SQLAlchemy stores the UTC clock time.
+_STORED_DATETIME = DateTime(timezone=False)
 
 
 def _utcnow() -> datetime:
@@ -29,7 +36,7 @@ class User(SQLModel, table=True):
     email: str = Field(index=True, unique=True)
     display_name: str
     password_hash: str
-    created_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_STORED_DATETIME)
 
 
 class BankConnection(SQLModel, table=True):
@@ -42,8 +49,8 @@ class BankConnection(SQLModel, table=True):
     pluggy_item_id: str = Field(index=True)
     institution_name: str
     status: str = Field(default="PENDING")
-    last_synced_at: datetime | None = None
-    created_at: datetime = Field(default_factory=_utcnow)
+    last_synced_at: datetime | None = Field(default=None, sa_type=_STORED_DATETIME)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_STORED_DATETIME)
 
 
 class Account(SQLModel, table=True):
@@ -56,7 +63,7 @@ class Account(SQLModel, table=True):
     account_type: str = Field(default="BANK")
     balance: Decimal = Field(default=Decimal("0"), max_digits=14, decimal_places=2)
     currency: str = Field(default="BRL")
-    updated_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow, sa_type=_STORED_DATETIME)
 
 
 class Transaction(SQLModel, table=True):
@@ -71,7 +78,7 @@ class Transaction(SQLModel, table=True):
     category: str = Field(default="Uncategorized")
     # True when the AI output passed strict schema validation.
     is_guarded: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_STORED_DATETIME)
 
 
 class ChatCache(SQLModel, table=True):
@@ -85,7 +92,7 @@ class ChatCache(SQLModel, table=True):
     question: str
     answer: str
     usage_date: date = Field(index=True)
-    created_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_STORED_DATETIME)
 
 
 class ChatUsage(SQLModel, table=True):

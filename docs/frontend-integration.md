@@ -31,6 +31,8 @@ axios.defaults.headers.common.Authorization = `Bearer ${access_token}`;
 
 A `401` means the token expired: clear it and route back to login.
 
+`POST /v1/auth/register` accepts a password of 8 to 72 UTF-8 bytes. A longer password, including one that is under 128 characters but over 72 bytes, is a validation error (`422`). That response uses FastAPI's validation body, not the `{detail, code}` shape below. Passwords within 72 bytes are unchanged.
+
 ## Open Finance flow
 
 ```mermaid

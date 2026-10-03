@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "C-0004/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "Pin the PR 9 updates and bcrypt 5.0.0 in requirements.txt and pyproject.toml, remove passlib and types-passlib, hash and verify with bcrypt.hashpw and bcrypt.checkpw, narrow persisted sync ids with require_id, reject registration passwords over 72 bytes, and set RETORNATUS_OMISSION to warn only for Dependabot pull requests whose diff is limited to dependency manifests.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "pytest shows registration rejects a password longer than 72 bytes with status 422 and accepts a password of 72 bytes",
+    "pytest shows a stored passlib bcrypt hash that starts with $2b$ still verifies and hash_password emits a $2b$ hash",
+    "A review note covers the Dependabot omission setting in the Retornatus workflow."
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0004/T-001",
+      "description": "Update pinned dependencies and remove passlib",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "requirements.txt",
+        "requirements-dev.txt",
+        "pyproject.toml",
+        "uv.lock"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0004/T-002",
+      "description": "Hash passwords with bcrypt and reject passwords over 72 bytes",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/**",
+        "tests/**",
+        "docs/**",
+        "README.md"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0004/T-003",
+      "description": "Narrow persisted sync ids with require_id",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/services/sync.py",
+        "tests/**"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0004/T-004",
+      "description": "Limit Retornatus omission warn to Dependabot manifest diffs",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        ".github/workflows/retornatus.yml",
+        "docs/**"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}

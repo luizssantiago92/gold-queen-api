@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0004",
+  "title": "Update dependencies and replace passlib with bcrypt",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Dependabot pull requests 9 and 10 fail CI. PR 9 bumps fastapi, uvicorn, sqlmodel, psycopg2-binary, alembic, pydantic-settings, email-validator, and PyJWT, and mypy rejects optional persisted ids in app/services/sync.py. PR 10 bumps bcrypt to 5.0.0, and unmaintained passlib 1.7.4 breaks tests by probing bcrypt with a password longer than 72 bytes. Both also fail the Retornatus omission gate because the diff touches pyproject.toml and no Change. Apply those pins, replace passlib with the bcrypt package, keep existing dollar-2b hashes valid, reject registration passwords longer than 72 bytes, and let Dependabot manifest-only pull requests pass omission without weakening the gate for human or agent pull requests.",
+    "kind": "MAINTENANCE"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-03T11:04:52.600421Z"
+}
