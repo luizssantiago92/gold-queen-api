@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "C-0002/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "Pin actions/checkout and actions/setup-python to verified tag SHAs in CI, set contents read, persist-credentials false, a job timeout, and concurrency that cancels older runs of the same pull request. Keep ruff check, ruff format --check, mypy, pip-audit, and pytest. Measure coverage and fail under the current total floored to a multiple of 5, configured in pyproject.toml, with pytest-cov pinned in the dev requirements. Add weekly Dependabot for pip and github-actions in America/Sao_Paulo, grouping minor and patch updates, with a low open-PR limit and commit prefixes chore(deps) and ci(deps). Add a CodeQL workflow for python and actions, pinned to the latest v4 commit, on push and pull request to main plus a weekly cron, with least-privilege permissions and build-mode none. Do not change application behavior or requirements.txt. Leave keep-alive and the Retornatus workflow logic unchanged.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "pytest, ruff check, ruff format, and mypy pass",
+    "A review note covers pinned workflows and Dependabot.",
+    "The coverage floor is documented in pyproject.toml."
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0002/T-001",
+      "description": "Pin CI actions, permissions, concurrency, and the coverage floor",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        ".github/workflows/ci.yml",
+        "pyproject.toml",
+        "requirements-dev.txt",
+        "uv.lock"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0002/T-002",
+      "description": "Add Dependabot and the CodeQL workflow",
+      "lifecycle": "COMPLETED",
+      "depends_on": [
+        "C-0002/T-001"
+      ],
+      "resources": [
+        ".github/dependabot.yml",
+        ".github/workflows/codeql.yml"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}
