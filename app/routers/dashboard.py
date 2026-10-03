@@ -5,6 +5,7 @@ from datetime import date
 from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import CurrentUser, SessionDep
+from app.models.entities import Account, BankConnection, Transaction, require_id
 from app.schemas.dashboard import (
     BankBalance,
     CategoriesResponse,
@@ -16,7 +17,6 @@ from app.schemas.dashboard import (
     TransactionPage,
     TransactionResponse,
 )
-from app.models.entities import Account, BankConnection, Transaction
 from app.services import treasury
 from app.services.demo_refresh import maybe_refresh_demo
 
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/v1/dashboard", tags=["dashboard"])
 
 
 def _refresh_demo_if_needed(session: SessionDep, current_user: CurrentUser) -> None:
-    maybe_refresh_demo(session, current_user.email, current_user.id)  # type: ignore[arg-type]
+    maybe_refresh_demo(session, current_user.email, require_id(current_user.id))
 
 
 def _transaction_response(
@@ -33,7 +33,7 @@ def _transaction_response(
     connection: BankConnection,
 ) -> TransactionResponse:
     return TransactionResponse(
-        id=transaction.id,  # type: ignore[arg-type]
+        id=require_id(transaction.id),
         description=transaction.description,
         amount=transaction.amount,
         transaction_date=transaction.transaction_date,
@@ -47,24 +47,25 @@ def _transaction_response(
 
 @router.get("/overview", response_model=OverviewResponse)
 def overview(current_user: CurrentUser, session: SessionDep) -> OverviewResponse:
-    user_id: int = current_user.id  # type: ignore[assignment]
+    user_id = require_id(current_user.id)
     _refresh_demo_if_needed(session, current_user)
 
     balances = treasury.balance_by_connection(session, user_id)
     total = treasury.total_balance(session, user_id)
     expenses, income = treasury.month_totals(session, user_id)
 
-    banks = [
-        BankBalance(
-            connection_id=connection.id,  # type: ignore[arg-type]
-            institution_name=connection.institution_name,
-            balance=balances.get(connection.id, treasury.ZERO),  # type: ignore[arg-type]
-            share_percentage=treasury.share(
-                balances.get(connection.id, treasury.ZERO), total  # type: ignore[arg-type]
-            ),
+    banks = []
+    for connection in treasury.user_connections(session, user_id):
+        connection_id = require_id(connection.id)
+        balance = balances.get(connection_id, treasury.ZERO)
+        banks.append(
+            BankBalance(
+                connection_id=connection_id,
+                institution_name=connection.institution_name,
+                balance=balance,
+                share_percentage=treasury.share(balance, total),
+            )
         )
-        for connection in treasury.user_connections(session, user_id)
-    ]
 
     return OverviewResponse(
         total_balance=total,
@@ -78,7 +79,7 @@ def overview(current_user: CurrentUser, session: SessionDep) -> OverviewResponse
 
 @router.get("/categories", response_model=CategoriesResponse)
 def categories(current_user: CurrentUser, session: SessionDep) -> CategoriesResponse:
-    user_id: int = current_user.id  # type: ignore[assignment]
+    user_id = require_id(current_user.id)
     _refresh_demo_if_needed(session, current_user)
 
     breakdown = treasury.expenses_by_category(session, user_id)
@@ -102,8 +103,10 @@ def categories(current_user: CurrentUser, session: SessionDep) -> CategoriesResp
 
 
 @router.get("/monthly-series", response_model=MonthlySeriesResponse)
-def monthly_series(current_user: CurrentUser, session: SessionDep) -> MonthlySeriesResponse:
-    user_id: int = current_user.id  # type: ignore[assignment]
+def monthly_series(
+    current_user: CurrentUser, session: SessionDep
+) -> MonthlySeriesResponse:
+    user_id = require_id(current_user.id)
     _refresh_demo_if_needed(session, current_user)
 
     series = treasury.daily_cumulative_expenses(session, user_id)
@@ -126,7 +129,7 @@ def transactions(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
 ) -> TransactionPage:
-    user_id: int = current_user.id  # type: ignore[assignment]
+    user_id = require_id(current_user.id)
     _refresh_demo_if_needed(session, current_user)
 
     start, end = treasury.month_bounds()
@@ -151,7 +154,7 @@ def transaction_detail(
     current_user: CurrentUser,
     session: SessionDep,
 ) -> TransactionDetailResponse:
-    user_id: int = current_user.id  # type: ignore[assignment]
+    user_id = require_id(current_user.id)
     _refresh_demo_if_needed(session, current_user)
 
     row = treasury.get_transaction_for_user(session, user_id, transaction_id)

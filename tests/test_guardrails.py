@@ -22,7 +22,10 @@ def test_category_is_normalized() -> None:
 
 
 def test_json_wrapped_in_markdown_fence_is_accepted() -> None:
-    raw = '```json\n{"results": [{"transaction_id": "tx-9", "category": "Transport"}]}\n```'
+    raw = (
+        '```json\n{"results": [{"transaction_id": "tx-9", '
+        '"category": "Transport"}]}\n```'
+    )
     assert validate_output(raw, CategorizationBatch).results[0].category == "Transport"
 
 

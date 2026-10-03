@@ -88,9 +88,12 @@ def test_deleting_a_connection_frees_a_slot_and_erases_its_data(
     # Transactions from the removed bank must not linger in the treasury.
     remaining = auth_client.get("/v1/dashboard/transactions").json()
     assert remaining["total"] > 0
-    assert auth_client.post(
-        "/v1/connections/sync", json={"item_id": ITEM_SLOTS[0]}
-    ).json()["transactions_synced"] > 0
+    assert (
+        auth_client.post(
+            "/v1/connections/sync", json={"item_id": ITEM_SLOTS[0]}
+        ).json()["transactions_synced"]
+        > 0
+    )
 
 
 def test_deleting_someone_elses_connection_is_rejected(client: TestClient) -> None:

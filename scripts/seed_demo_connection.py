@@ -222,9 +222,7 @@ async def main() -> int:
         print(f"Using sandbox connector: {name} (id {connector['id']})")
 
         print("Resolving the demo user...")
-        client_user_id = await _demo_user_id(
-            client, api_url, args.email, args.password
-        )
+        client_user_id = await _demo_user_id(client, api_url, args.email, args.password)
         item_id = await _create_item(
             client, pluggy_url, api_key, connector, client_user_id
         )

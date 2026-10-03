@@ -39,9 +39,7 @@ def test_default_regex_matches_team_previews_but_not_other_apps() -> None:
     pattern = re.compile(Settings().allowed_origin_regex or "")
     slug = DEFAULT_VERCEL_TEAM_SLUG
 
-    assert pattern.fullmatch(
-        f"https://gold-queen-web-abc123456-{slug}.vercel.app"
-    )
+    assert pattern.fullmatch(f"https://gold-queen-web-abc123456-{slug}.vercel.app")
     assert pattern.fullmatch(f"https://gold-queen-web-git-main-{slug}.vercel.app")
     # Production is an exact origin, not a wildcard that any similar name satisfies.
     assert pattern.fullmatch(PRODUCTION_WEB_ORIGIN) is None
@@ -78,7 +76,9 @@ def test_production_rejects_the_default_jwt_secret() -> None:
 
 
 def test_production_rejects_a_short_jwt_secret() -> None:
-    settings = Settings(environment="production", jwt_secret="short-but-not-the-default")
+    settings = Settings(
+        environment="production", jwt_secret="short-but-not-the-default"
+    )
     with pytest.raises(RuntimeError, match="JWT_SECRET"):
         assert_production_jwt_secret(settings)
 
@@ -131,10 +131,14 @@ def test_production_closes_registration_unless_set_explicitly(
     assert closed.allow_registration is None
     assert closed.registration_enabled is False
 
-    assert Settings(environment="production", allow_registration=True).registration_enabled
+    assert Settings(
+        environment="production", allow_registration=True
+    ).registration_enabled
     assert Settings(environment="Production").registration_enabled is False
     assert (
-        Settings(environment="development", allow_registration=False).registration_enabled
+        Settings(
+            environment="development", allow_registration=False
+        ).registration_enabled
         is False
     )
 

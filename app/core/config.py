@@ -171,7 +171,8 @@ def assert_production_jwt_secret(settings: Settings) -> None:
     if secret == DEFAULT_JWT_SECRET or len(secret) < MIN_JWT_SECRET_LENGTH:
         raise RuntimeError(
             "Refusing to start: JWT_SECRET must be changed from the default and "
-            f"be at least {MIN_JWT_SECRET_LENGTH} characters when ENVIRONMENT=production."
+            f"be at least {MIN_JWT_SECRET_LENGTH} characters when "
+            "ENVIRONMENT=production."
         )
 
 

@@ -33,7 +33,9 @@ _BILLS = re.compile(
     r"boleto|energia|eletrobras|light|vivo|tim|claro|oi |sabesp|copel|cemig|água|agua",
     re.I,
 )
-_AUTO_DEBIT = re.compile(r"debito automatico|débito automático|da convenio|convênio", re.I)
+_AUTO_DEBIT = re.compile(
+    r"debito automatico|débito automático|da convenio|convênio", re.I
+)
 _CREDIT_CARD = re.compile(
     r"fatura|cartao|cartão|visa|mastercard|nubank.*card|pagamento fat",
     re.I,

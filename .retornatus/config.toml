@@ -26,9 +26,24 @@ run = [
     "run",
     "ruff",
     "check",
-    "src",
     "app",
     "tests",
+    "scripts",
+    "alembic",
+]
+types = [
+    "lint_result",
+]
+
+[[assurance.required_checks]]
+name = "ruff-format"
+run = [
+    "uv",
+    "run",
+    "ruff",
+    "format",
+    "--check",
+    ".",
 ]
 types = [
     "lint_result",

@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from sqlmodel import Session, select
 
-from app.models.entities import Account, BankConnection, Transaction, User
+from app.models.entities import Account, BankConnection, Transaction, User, require_id
 from app.services.demo_refresh import maybe_refresh_demo, refresh_demo_transaction_dates
 
 
@@ -15,7 +15,7 @@ def _seed_transaction(
     transaction_date: date,
 ) -> None:
     connection = BankConnection(
-        user_id=user.id,  # type: ignore[arg-type]
+        user_id=require_id(user.id),
         pluggy_item_id="item-demo",
         institution_name="Pluggy Bank",
         status="UPDATED",
@@ -25,7 +25,7 @@ def _seed_transaction(
     session.refresh(connection)
 
     account = Account(
-        connection_id=connection.id,  # type: ignore[arg-type]
+        connection_id=require_id(connection.id),
         pluggy_account_id="acc-demo",
         name="Checking",
         balance=Decimal("1000.00"),
@@ -36,7 +36,7 @@ def _seed_transaction(
 
     session.add(
         Transaction(
-            account_id=account.id,  # type: ignore[arg-type]
+            account_id=require_id(account.id),
             pluggy_transaction_id="tx-demo",
             description="Demo purchase",
             amount=Decimal("-10.00"),
@@ -57,7 +57,7 @@ def test_refresh_shifts_stale_dates_into_current_month(session: Session) -> None
     stale = date.today().replace(day=1) - timedelta(days=10)
     _seed_transaction(session, user, stale)
 
-    updated = refresh_demo_transaction_dates(session, user.id)  # type: ignore[arg-type]
+    updated = refresh_demo_transaction_dates(session, require_id(user.id))
     assert updated == 1
 
     transaction = session.exec(
@@ -77,4 +77,4 @@ def test_maybe_refresh_ignores_non_demo_users(session: Session) -> None:
     stale = date.today().replace(day=1) - timedelta(days=10)
     _seed_transaction(session, user, stale)
 
-    assert maybe_refresh_demo(session, user.email, user.id) == 0  # type: ignore[arg-type]
+    assert maybe_refresh_demo(session, user.email, require_id(user.id)) == 0

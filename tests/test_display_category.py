@@ -11,7 +11,9 @@ def test_positive_amounts_are_income() -> None:
 
 def test_subscription_keywords() -> None:
     assert (
-        classify_display("SPOTIFY PREMIUM", Decimal("-21.90"), ai_category="Entertainment")
+        classify_display(
+            "SPOTIFY PREMIUM", Decimal("-21.90"), ai_category="Entertainment"
+        )
         == "Subscriptions"
     )
 
@@ -33,4 +35,7 @@ def test_credit_card_account_type() -> None:
 
 
 def test_falls_back_to_ai_category() -> None:
-    assert classify_display("UNKNOWN MERCHANT", Decimal("-10.00"), ai_category="Food") == "Food"
+    assert (
+        classify_display("UNKNOWN MERCHANT", Decimal("-10.00"), ai_category="Food")
+        == "Food"
+    )

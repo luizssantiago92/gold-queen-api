@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "C-0001/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "Add pyproject.toml for ruff, pytest, mypy, and coverage; keep requirements files for Render and CI; bump ruff to the current release; format Python in its own commit and record that SHA in .git-blame-ignore-revs; fix the four mypy errors and narrow persisted ids without changing behavior; add mypy and format check to CI; remove google-genai and correct the README. Constraints: do not change runtime behavior; do not squash the format commit; keep requirements files because Render and CI install from them.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "pytest, ruff check, and mypy pass for app and tests",
+    "README documents Gemini REST via httpx, not the GenAI SDK.",
+    "The format-only commit is documented in .git-blame-ignore-revs.",
+    "A review note covers the CI workflow tool steps."
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0001/T-001",
+      "description": "Add pyproject.toml, bump ruff, drop google-genai, and correct the README",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "pyproject.toml",
+        "uv.lock",
+        "requirements.txt",
+        "requirements-dev.txt",
+        "pytest.ini",
+        "README.md"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0001/T-002",
+      "description": "Fix mypy errors and narrow persisted ids without behavior change",
+      "lifecycle": "COMPLETED",
+      "depends_on": [
+        "C-0001/T-001"
+      ],
+      "resources": [
+        "app/**",
+        "tests/**"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0001/T-003",
+      "description": "Format the Python tree in one commit",
+      "lifecycle": "COMPLETED",
+      "depends_on": [
+        "C-0001/T-002"
+      ],
+      "resources": [
+        "app/**",
+        "tests/**",
+        "scripts/**",
+        "alembic/**"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0001/T-004",
+      "description": "Record the format SHA and add mypy plus format check to CI",
+      "lifecycle": "COMPLETED",
+      "depends_on": [
+        "C-0001/T-003"
+      ],
+      "resources": [
+        ".git-blame-ignore-revs",
+        ".github/workflows/ci.yml"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}

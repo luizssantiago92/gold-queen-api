@@ -10,6 +10,18 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def require_id(value: int | None) -> int:
+    """Return a primary key after the row has been flushed.
+
+    SQLModel types table ids as optional because they are filled on insert.
+    Callers that already loaded or refreshed a row use this to narrow the type.
+    A missing id is a programming error, not a client-facing response.
+    """
+    if value is None:
+        raise RuntimeError("Persisted row is missing a primary key.")
+    return value
+
+
 class User(SQLModel, table=True):
     __tablename__ = "users"
 

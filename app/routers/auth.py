@@ -23,7 +23,9 @@ from app.schemas.auth import (
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 def register(payload: RegisterRequest, session: SessionDep) -> User:
     if not get_settings().registration_enabled:
         raise RegistrationDisabledError("Registration is disabled.")
@@ -44,7 +46,9 @@ def register(payload: RegisterRequest, session: SessionDep) -> User:
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, session: SessionDep, request: Request) -> TokenResponse:
+def login(
+    payload: LoginRequest, session: SessionDep, request: Request
+) -> TokenResponse:
     enforce_login_rate_limit(request)
     user = session.exec(select(User).where(User.email == payload.email)).first()
     if user is None or not verify_password(payload.password, user.password_hash):

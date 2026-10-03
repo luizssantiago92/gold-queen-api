@@ -3,7 +3,7 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.config import get_settings
 from app.models.entities import Account, BankConnection, Transaction
@@ -34,10 +34,12 @@ def user_connections(session: Session, user_id: int) -> list[BankConnection]:
     )
 
 
-def user_accounts(session: Session, user_id: int) -> list[tuple[Account, BankConnection]]:
+def user_accounts(
+    session: Session, user_id: int
+) -> list[tuple[Account, BankConnection]]:
     rows = session.exec(
         select(Account, BankConnection)
-        .join(BankConnection, Account.connection_id == BankConnection.id)  # type: ignore[arg-type]
+        .join(BankConnection, col(Account.connection_id) == col(BankConnection.id))
         .where(BankConnection.user_id == user_id)
     ).all()
     return [(account, connection) for account, connection in rows]
@@ -51,8 +53,8 @@ def user_transaction_rows(
 ) -> list[tuple[Transaction, Account, BankConnection]]:
     statement = (
         select(Transaction, Account, BankConnection)
-        .join(Account, Transaction.account_id == Account.id)  # type: ignore[arg-type]
-        .join(BankConnection, Account.connection_id == BankConnection.id)  # type: ignore[arg-type]
+        .join(Account, col(Transaction.account_id) == col(Account.id))
+        .join(BankConnection, col(Account.connection_id) == col(BankConnection.id))
         .where(BankConnection.user_id == user_id)
     )
     if start is not None:
@@ -60,8 +62,11 @@ def user_transaction_rows(
     if end is not None:
         statement = statement.where(Transaction.transaction_date < end)
 
-    rows = session.exec(statement.order_by(Transaction.transaction_date.desc())).all()  # type: ignore[attr-defined]
-    return [(transaction, account, connection) for transaction, account, connection in rows]
+    ordered = statement.order_by(col(Transaction.transaction_date).desc())
+    rows = session.exec(ordered).all()
+    return [
+        (transaction, account, connection) for transaction, account, connection in rows
+    ]
 
 
 def user_transactions(
@@ -72,7 +77,9 @@ def user_transactions(
 ) -> list[tuple[Transaction, BankConnection]]:
     return [
         (transaction, connection)
-        for transaction, _, connection in user_transaction_rows(session, user_id, start, end)
+        for transaction, _, connection in user_transaction_rows(
+            session, user_id, start, end
+        )
     ]
 
 
@@ -128,8 +135,13 @@ def month_totals(session: Session, user_id: int) -> tuple[Decimal, Decimal]:
     return _quantize(expenses), _quantize(income)
 
 
-def expenses_by_category(session: Session, user_id: int) -> dict[str, tuple[Decimal, int]]:
-    """Return ``display_category -> (total_expense, transaction_count)`` for this month."""
+def expenses_by_category(
+    session: Session, user_id: int
+) -> dict[str, tuple[Decimal, int]]:
+    """Return ``display_category -> (total_expense, transaction_count)``.
+
+    Totals cover the current calendar month.
+    """
     start, end = month_bounds()
     breakdown: dict[str, tuple[Decimal, int]] = {}
     for transaction, account, _ in user_transaction_rows(session, user_id, start, end):
@@ -188,20 +200,26 @@ def build_ai_summary(session: Session, user_id: int) -> str:
     connections = user_connections(session, user_id)
 
     ranked = sorted(categories.items(), key=lambda item: item[1][0], reverse=True)
-    category_lines = "\n".join(
-        f"- {category}: R$ {total} ({count} transactions)"
-        for category, (total, count) in ranked[:8]
-    ) or "- no expenses recorded this month"
+    category_lines = (
+        "\n".join(
+            f"- {category}: R$ {total} ({count} transactions)"
+            for category, (total, count) in ranked[:8]
+        )
+        or "- no expenses recorded this month"
+    )
 
-    bank_lines = "\n".join(
-        f"- {connection.institution_name}" for connection in connections
-    ) or "- no banks connected yet"
+    bank_lines = (
+        "\n".join(f"- {connection.institution_name}" for connection in connections)
+        or "- no banks connected yet"
+    )
 
     reference = date.today().strftime("%Y-%m")
     return (
         "Product rules (authoritative, never contradict them):\n"
-        f"- The free plan allows up to {settings.max_bank_connections} bank connections.\n"
-        f"- The user may ask the Gold Queen {settings.chat_daily_limit} questions per day.\n"
+        f"- The free plan allows up to {settings.max_bank_connections} bank "
+        "connections.\n"
+        f"- The user may ask the Gold Queen {settings.chat_daily_limit} "
+        "questions per day.\n"
         "\n"
         f"Reference month: {reference}\n"
         f"Total balance across banks: R$ {balance}\n"

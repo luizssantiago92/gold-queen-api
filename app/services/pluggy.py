@@ -92,7 +92,14 @@ def _fail_upstream(operation: str, response: httpx.Response) -> None:
 
 
 class PluggyAccount:
-    def __init__(self, account_id: str, name: str, balance: Decimal, currency: str, account_type: str):
+    def __init__(
+        self,
+        account_id: str,
+        name: str,
+        balance: Decimal,
+        currency: str,
+        account_type: str,
+    ):
         self.account_id = account_id
         self.name = name
         self.balance = balance
@@ -101,7 +108,13 @@ class PluggyAccount:
 
 
 class PluggyTransaction:
-    def __init__(self, transaction_id: str, description: str, amount: Decimal, transaction_date: date):
+    def __init__(
+        self,
+        transaction_id: str,
+        description: str,
+        amount: Decimal,
+        transaction_date: date,
+    ):
         self.transaction_id = transaction_id
         self.description = description
         self.amount = amount
@@ -120,7 +133,11 @@ class PluggyClient:
 
     async def _authenticate(self, client: httpx.AsyncClient) -> str:
         now = datetime.now(UTC)
-        if self._api_key and self._api_key_expires_at and now < self._api_key_expires_at:
+        if (
+            self._api_key
+            and self._api_key_expires_at
+            and now < self._api_key_expires_at
+        ):
             return self._api_key
 
         response = await client.post(
@@ -295,7 +312,8 @@ def _simulated_transactions(account_id: str) -> list[PluggyTransaction]:
                 transaction_id=f"{account_id}-tx-{index}",
                 description=merchant,
                 amount=-amount,
-                transaction_date=today - timedelta(days=rng.randrange(0, max_days_back + 1)),
+                transaction_date=today
+                - timedelta(days=rng.randrange(0, max_days_back + 1)),
             )
         )
     return transactions

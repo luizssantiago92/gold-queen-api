@@ -36,7 +36,9 @@ def test_listed_origin_is_allowed_on_both_paths(client: TestClient) -> None:
 
 def test_production_and_team_previews_are_allowed(client: TestClient) -> None:
     for origin in (PRODUCTION, PREVIEW, BRANCH_PREVIEW):
-        assert _preflight(client, origin).headers["access-control-allow-origin"] == origin
+        assert (
+            _preflight(client, origin).headers["access-control-allow-origin"] == origin
+        )
 
         response = client.get("/health", headers={"Origin": origin})
         assert response.headers["access-control-allow-origin"] == origin

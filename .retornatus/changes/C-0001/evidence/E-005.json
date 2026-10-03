@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "C-0001/E-005",
+  "type": "repository_observation",
+  "subject": "workflows",
+  "source": "actionlint",
+  "producer": "retornatus",
+  "observed_at": "2026-10-03T05:22:04.113216Z",
+  "subject_state": null,
+  "provenance": "executed",
+  "command": [
+    "actionlint"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-10-03T05:22:04.104763Z",
+  "ended_at": "2026-10-03T05:22:04.108242Z",
+  "duration_ms": 3,
+  "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "output_tail": "",
+  "output_artifact": ".retornatus/changes/C-0001/evidence/E-005.output.txt",
+  "git_commit": "dd85198c5fde07d67002c8a5654f5e6c7501615e",
+  "worktree_dirty": true,
+  "timed_out": false,
+  "relations": []
+}

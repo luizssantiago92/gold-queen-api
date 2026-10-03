@@ -22,9 +22,7 @@ def _auth_headers(
         },
     )
     assert created.status_code == 201
-    login = client.post(
-        "/v1/auth/login", json={"email": email, "password": password}
-    )
+    login = client.post("/v1/auth/login", json={"email": email, "password": password})
     assert login.status_code == 200
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
@@ -34,9 +32,7 @@ def _with_ip(headers: dict[str, str], ip: str) -> dict[str, str]:
 
 
 @pytest.mark.parametrize("email", ["queen@goldqueen.dev", "squire@goldqueen.dev"])
-def test_demo_account_cannot_mutate_connections(
-    client: TestClient, email: str
-) -> None:
+def test_demo_account_cannot_mutate_connections(client: TestClient, email: str) -> None:
     headers = _auth_headers(client, email)
 
     connect = client.post("/v1/connections/connect", headers=headers)
