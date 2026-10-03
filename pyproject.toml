@@ -4,18 +4,17 @@ version = "1.0.0"
 description = "Open Finance aggregation API for the Gold Queen prototype."
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi==0.141.1",
+    "fastapi==0.142.2",
     "starlette==1.7.0",
-    "uvicorn[standard]==0.34.0",
-    "sqlmodel==0.0.22",
-    "psycopg2-binary==2.9.10",
-    "alembic==1.14.0",
-    "pydantic-settings==2.7.0",
-    "email-validator==2.2.0",
+    "uvicorn[standard]==0.54.0",
+    "sqlmodel==0.0.47",
+    "psycopg2-binary==2.9.13",
+    "alembic==1.20.0",
+    "pydantic-settings==2.15.0",
+    "email-validator==2.3.0",
     "python-dotenv==1.2.3",
-    "PyJWT==2.15.0",
-    "passlib[bcrypt]==1.7.4",
-    "bcrypt==4.0.1",
+    "PyJWT==2.15.1",
+    "bcrypt==5.0.0",
     "httpx==0.28.1",
     "python-multipart==0.0.32",
 ]
@@ -27,7 +26,6 @@ dev = [
     "pytest-cov==7.1.0",
     "ruff==0.16.10",
     "mypy==2.4.0",
-    "types-passlib==1.7.7.20260211",
     "coverage==7.16.2",
     "pip-audit==2.10.1",
 ]

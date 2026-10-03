@@ -1,23 +1,56 @@
-"""Password hashing and JWT issuing/verification."""
+"""Password hashing and JWT issuing/verification.
+
+Password hashes are bcrypt ``$2b$`` strings at 12 rounds, the same prefix and
+cost passlib's bcrypt scheme wrote. Hashes already stored in production still
+verify through ``bcrypt.checkpw``. bcrypt only consumes the first 72 bytes of
+a password. bcrypt 5 raises ``ValueError`` instead of truncating, so callers
+reject a longer password before hashing and treat it as a mismatch on verify.
+"""
 
 from datetime import UTC, datetime, timedelta
 
+import bcrypt
 import jwt
 from jwt.exceptions import InvalidTokenError
-from passlib.context import CryptContext
 
 from app.core.config import get_settings
 from app.core.exceptions import AuthenticationError
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# passlib's bcrypt scheme default, and bcrypt.gensalt()'s default.
+BCRYPT_ROUNDS = 12
+BCRYPT_MAX_PASSWORD_BYTES = 72
+
+
+def _password_bytes(plain_password: str) -> bytes:
+    encoded = plain_password.encode("utf-8")
+    if len(encoded) > BCRYPT_MAX_PASSWORD_BYTES:
+        raise ValueError("Password must be at most 72 bytes.")
+    return encoded
 
 
 def hash_password(plain_password: str) -> str:
-    return _pwd_context.hash(plain_password)
+    hashed = bcrypt.hashpw(
+        _password_bytes(plain_password),
+        bcrypt.gensalt(rounds=BCRYPT_ROUNDS),
+    )
+    return hashed.decode("ascii")
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    return _pwd_context.verify(plain_password, password_hash)
+    """Return whether ``plain_password`` matches a stored bcrypt hash.
+
+    A password over 72 bytes, or a hash that is not ASCII bcrypt text, is a
+    mismatch. The function does not truncate the password to make it match.
+    """
+    try:
+        password = _password_bytes(plain_password)
+        hashed = password_hash.encode("ascii")
+    except (UnicodeEncodeError, ValueError):
+        return False
+    try:
+        return bcrypt.checkpw(password, hashed)
+    except ValueError:
+        return False
 
 
 def create_access_token(subject: str) -> str:

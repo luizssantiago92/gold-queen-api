@@ -22,6 +22,16 @@
 #   fail (default) — a code diff with no touched Change fails the job
 #   warn — print a warning and continue
 #
+# Retornatus 1.9.1 has no config key and no action input that exempts paths
+# or the Dependabot author. The action treats src, tests, scripts, templates,
+# pyproject.toml, and uv.lock as code. requirements*.txt and workflow files
+# do not trip omission by themselves. A job-level if that skips this job for
+# dependabot[bot] would mark the required retornatus-gates check successful
+# and would also skip the suppressions gate, so this workflow does not do that.
+# The step below sets warn only when the pull request author is
+# dependabot[bot] and every changed file is a dependency manifest. Human and
+# agent pull requests keep fail.
+#
 # Checkout needs fetch-depth: 0 so the diff base is in the clone.
 # Third-party actions stay pinned to commit SHAs.
 # This workflow does not push, merge, deploy, or sign receipts.
@@ -50,6 +60,98 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      # Dependabot manifest bumps touch pyproject.toml, which 1.9.1 counts as
+      # code. warn is the supported omission mode. It stays fail unless the
+      # author is dependabot[bot] and the diff is only dependency manifests.
+      - name: Set omission mode for Dependabot manifest diffs
+        shell: bash
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login || '' }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+        run: |
+          set -euo pipefail
+          mode=fail
+          if [ "${PR_AUTHOR}" = "dependabot[bot]" ] && [ -n "${BASE_SHA}" ]; then
+            if python3 - "${BASE_SHA}" <<'PY'
+          import re
+          import subprocess
+          import sys
+
+          base = sys.argv[1]
+          names = [
+              name
+              for name in subprocess.check_output(
+                  ["git", "diff", "--name-only", f"{base}...HEAD"],
+                  text=True,
+              ).splitlines()
+              if name
+          ]
+          if not names:
+              sys.exit(1)
+
+          manifest = re.compile(
+              r"^(requirements\.txt|requirements-[A-Za-z0-9_.-]+\.txt|pyproject\.toml|uv\.lock)$"
+          )
+          workflow = re.compile(r"^\.github/workflows/[^/]+\.ya?ml$")
+          dep_sections = {
+              "[project]",
+              "[dependency-groups]",
+              "[project.optional-dependencies]",
+          }
+          pin = re.compile(
+              r'^"[A-Za-z0-9][A-Za-z0-9_.-]*(?:\[[A-Za-z0-9_,.-]+\])?==[^"]+",?$'
+          )
+          uses_pin = re.compile(
+              r"^\s*(?:-\s*)?uses:\s+\S+@\S+(?:\s+#.*)?\s*$"
+          )
+
+          for name in names:
+              if manifest.match(name) or workflow.match(name):
+                  continue
+              sys.exit(1)
+
+          if "pyproject.toml" in names:
+              diff = subprocess.check_output(
+                  ["git", "diff", "-U9999", f"{base}...HEAD", "--", "pyproject.toml"],
+                  text=True,
+              )
+              section = ""
+              for line in diff.splitlines():
+                  if line.startswith(("diff ", "index ", "--- ", "+++ ", "@@")):
+                      continue
+                  if not line or line[0] not in " +-":
+                      continue
+                  body = line[1:].strip()
+                  if body.startswith("[") and body.endswith("]"):
+                      section = body
+                      if line[0] in "+-":
+                          sys.exit(1)
+                      continue
+                  if line[0] not in "+-":
+                      continue
+                  if section not in dep_sections or not pin.match(body):
+                      sys.exit(1)
+
+          for name in names:
+              if workflow.match(name) is None:
+                  continue
+              diff = subprocess.check_output(
+                  ["git", "diff", "-U0", f"{base}...HEAD", "--", name],
+                  text=True,
+              )
+              for line in diff.splitlines():
+                  if not line or line[0] not in "+-" or line.startswith(("+++", "---")):
+                      continue
+                  if uses_pin.match(line[1:]) is None:
+                      sys.exit(1)
+          PY
+            then
+              mode=warn
+            fi
+          fi
+          echo "RETORNATUS_OMISSION=${mode}" >> "${GITHUB_ENV}"
+          echo "RETORNATUS_OMISSION=${mode}"
 
       - uses: luizssantiago92/retornatus@v1 # marketplace major tag; owner publishes it
         with:

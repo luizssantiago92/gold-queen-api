@@ -107,7 +107,7 @@ Never expose `PLUGGY_CLIENT_SECRET` or `GEMINI_API_KEY` to the browser.
 | --- | --- | --- |
 | `GET` | `/` | Redirects to `/docs` (307). Not listed in the OpenAPI schema. |
 | `GET` | `/health` | Local liveness: `status`, `pluggy_live`, `ai_live`. No outbound calls and no `environment`. `?db=1` runs `SELECT 1` and adds `"database":"ok"` (503 if the database is unreachable). `?deep=1` is the only Gemini probe and adds `ai_provider` (`ok`, `degraded`, or `offline`). |
-| `POST` | `/v1/auth/register` | Create account |
+| `POST` | `/v1/auth/register` | Create account. The password must be 8 to 72 UTF-8 bytes; a longer password returns 422. |
 | `POST` | `/v1/auth/login` | JWT bearer token |
 | `GET` | `/v1/auth/me` | Current user |
 | `GET` | `/v1/connections` | Linked banks |

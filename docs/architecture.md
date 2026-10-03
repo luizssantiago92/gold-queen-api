@@ -81,6 +81,7 @@ Product rules (bank limit, daily quota) are injected into the summary so the mod
 ## Security
 
 - JWT bearer authentication on all `/v1/*` routes except auth register/login.
+- Passwords are hashed with the `bcrypt` package (`hashpw` / `checkpw`, 12 rounds, `$2b$`). Hashes already stored by passlib use that prefix and still verify. Registration rejects a password longer than 72 UTF-8 bytes with HTTP 422. bcrypt 5 raises on those inputs instead of truncating them. Passwords of at most 72 bytes are unchanged.
 - Users can only access their own connections and transactions (scoped queries).
 - Secrets (`JWT_SECRET`, Pluggy, Gemini) are server-side only. `ENVIRONMENT=production` refuses the default or a short `JWT_SECRET`.
 - CORS allowlist for exact production origins, plus a preview regex anchored to the Vercel team slug.
