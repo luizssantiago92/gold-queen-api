@@ -1,6 +1,6 @@
 # Product Requirement Document (PRD) — Back-end Engine
 
-> **Historical document.** For current behaviour, quotas, endpoints, and deployment, use [README.md](README.md) and [docs/](docs/README.md). Notable deltas: daily AI quota is **5** (not 10), AI cache is in PostgreSQL (not in-memory), Pluggy uses `/v2/transactions`, model is `gemini-3.6-flash`.
+> **Historical document.** For current behaviour, quotas, endpoints, and deployment, use [README.md](../../README.md) and [docs/](../README.md). Notable deltas: daily AI quota is **5** (not 10), AI cache is in PostgreSQL (not in-memory), Pluggy uses `/v2/transactions`, model is `gemini-3.6-flash`.
 
 ## 1. Identificação do Repositório
 * **Nome do Repositório:** `gold-queen-api`
