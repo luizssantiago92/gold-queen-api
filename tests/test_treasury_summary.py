@@ -40,7 +40,9 @@ def test_summary_lists_connected_banks(client: TestClient, session: Session) -> 
     )
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
     client.post(
-        "/v1/connections/sync", json={"item_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd"}, headers=headers
+        "/v1/connections/sync",
+        json={"item_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd"},
+        headers=headers,
     )
 
     summary = build_ai_summary(session, 1)

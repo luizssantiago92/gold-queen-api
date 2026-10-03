@@ -62,9 +62,7 @@ def _get_or_create_usage(
     return usage
 
 
-def remaining_requests(
-    session: Session, user_id: int, subject_key: str = ""
-) -> int:
+def remaining_requests(session: Session, user_id: int, subject_key: str = "") -> int:
     limit = get_settings().chat_daily_limit
     usage = _get_or_create_usage(session, user_id, date.today(), subject_key)
     return max(limit - usage.request_count, 0)

@@ -10,7 +10,9 @@ from app.services.ai import AIEngine
 
 
 def test_queen_tips_returns_three_sections(auth_client: TestClient) -> None:
-    auth_client.post("/v1/connections/sync", json={"item_id": "11111111-1111-4111-8111-111111111111"})
+    auth_client.post(
+        "/v1/connections/sync", json={"item_id": "11111111-1111-4111-8111-111111111111"}
+    )
 
     body = auth_client.get("/v1/advisor/queen-tips").json()
     assert body["critical_expense"]
@@ -48,7 +50,10 @@ def test_daily_quota_returns_themed_429(auth_client: TestClient) -> None:
     for index in range(limit):
         response = auth_client.post(
             "/v1/chat/query",
-            json={"question": f"How should I manage my gold this week {index}?", "locale": "en"},
+            json={
+                "question": f"How should I manage my gold this week {index}?",
+                "locale": "en",
+            },
         )
         assert response.status_code == 200
 
@@ -67,7 +72,10 @@ def test_daily_quota_portuguese_message(auth_client: TestClient) -> None:
     for index in range(limit):
         auth_client.post(
             "/v1/chat/query",
-            json={"question": f"Como protejo meu ouro esta semana {index}?", "locale": "pt"},
+            json={
+                "question": f"Como protejo meu ouro esta semana {index}?",
+                "locale": "pt",
+            },
         )
 
     blocked = auth_client.post(
@@ -82,6 +90,7 @@ def test_a_failed_model_call_is_neither_cached_nor_charged(
     auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An upstream outage must not cost a question nor stick around all day."""
+
     def broken(
         self: AIEngine, question: str, summary: str, locale: str = "en"
     ) -> tuple[str, bool]:

@@ -34,7 +34,9 @@ def user_connections(session: Session, user_id: int) -> list[BankConnection]:
     )
 
 
-def user_accounts(session: Session, user_id: int) -> list[tuple[Account, BankConnection]]:
+def user_accounts(
+    session: Session, user_id: int
+) -> list[tuple[Account, BankConnection]]:
     rows = session.exec(
         select(Account, BankConnection)
         .join(BankConnection, col(Account.connection_id) == col(BankConnection.id))
@@ -62,7 +64,9 @@ def user_transaction_rows(
 
     ordered = statement.order_by(col(Transaction.transaction_date).desc())
     rows = session.exec(ordered).all()
-    return [(transaction, account, connection) for transaction, account, connection in rows]
+    return [
+        (transaction, account, connection) for transaction, account, connection in rows
+    ]
 
 
 def user_transactions(
@@ -73,7 +77,9 @@ def user_transactions(
 ) -> list[tuple[Transaction, BankConnection]]:
     return [
         (transaction, connection)
-        for transaction, _, connection in user_transaction_rows(session, user_id, start, end)
+        for transaction, _, connection in user_transaction_rows(
+            session, user_id, start, end
+        )
     ]
 
 
@@ -129,7 +135,9 @@ def month_totals(session: Session, user_id: int) -> tuple[Decimal, Decimal]:
     return _quantize(expenses), _quantize(income)
 
 
-def expenses_by_category(session: Session, user_id: int) -> dict[str, tuple[Decimal, int]]:
+def expenses_by_category(
+    session: Session, user_id: int
+) -> dict[str, tuple[Decimal, int]]:
     """Return ``display_category -> (total_expense, transaction_count)`` for this month."""
     start, end = month_bounds()
     breakdown: dict[str, tuple[Decimal, int]] = {}
@@ -189,14 +197,18 @@ def build_ai_summary(session: Session, user_id: int) -> str:
     connections = user_connections(session, user_id)
 
     ranked = sorted(categories.items(), key=lambda item: item[1][0], reverse=True)
-    category_lines = "\n".join(
-        f"- {category}: R$ {total} ({count} transactions)"
-        for category, (total, count) in ranked[:8]
-    ) or "- no expenses recorded this month"
+    category_lines = (
+        "\n".join(
+            f"- {category}: R$ {total} ({count} transactions)"
+            for category, (total, count) in ranked[:8]
+        )
+        or "- no expenses recorded this month"
+    )
 
-    bank_lines = "\n".join(
-        f"- {connection.institution_name}" for connection in connections
-    ) or "- no banks connected yet"
+    bank_lines = (
+        "\n".join(f"- {connection.institution_name}" for connection in connections)
+        or "- no banks connected yet"
+    )
 
     reference = date.today().strftime("%Y-%m")
     return (

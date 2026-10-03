@@ -28,16 +28,16 @@ def queen_tips(
     locale: Annotated[Locale, Query()] = DEFAULT_LOCALE,
     accept_language: str | None = Header(default=None, alias="Accept-Language"),
 ) -> QueenTipsResponse:
-    resolved_locale = parse_locale(locale) if locale else parse_accept_language(accept_language)
+    resolved_locale = (
+        parse_locale(locale) if locale else parse_accept_language(accept_language)
+    )
     """Return today's diagnosis, reusing the cached one to spend zero extra tokens."""
     user_id = require_id(current_user.id)
     subject_key = demo_quota_subject(current_user, request)
     summary = treasury.build_ai_summary(session, user_id)
 
     # The cache key includes the summary so a new sync produces fresh advice.
-    question_hash = hashlib.sha256(
-        f"{_TIPS_CACHE_KEY}:{summary}".encode()
-    ).hexdigest()
+    question_hash = hashlib.sha256(f"{_TIPS_CACHE_KEY}:{summary}".encode()).hexdigest()
     today = date.today()
 
     cached = session.exec(

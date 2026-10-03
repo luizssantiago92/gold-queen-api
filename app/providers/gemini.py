@@ -93,7 +93,9 @@ class GeminiProvider:
             if owns_client:
                 client.close()
         if response.status_code >= 500:
-            raise ProviderError("gemini upstream error", status_code=response.status_code)
+            raise ProviderError(
+                "gemini upstream error", status_code=response.status_code
+            )
         if response.status_code >= 400:
             raise ProviderError("gemini client error", status_code=response.status_code)
         return response.json()

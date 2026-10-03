@@ -72,7 +72,9 @@ def create_app() -> FastAPI:
             "environment": settings.environment,
             "pluggy_live": settings.pluggy_enabled,
             "ai_live": ai_configured,
-            "ai_provider": "ok" if ai_reachable else ("degraded" if ai_configured else "offline"),
+            "ai_provider": "ok"
+            if ai_reachable
+            else ("degraded" if ai_configured else "offline"),
         }
         # Opt-in so Render's frequent health checks stay DB-free. The keep-alive
         # workflow sends ?db=1 so the free Supabase project sees real activity.

@@ -61,8 +61,12 @@ async def test_transactions_use_the_v2_endpoint_and_follow_the_cursor(
                 200,
                 json={
                     "results": [
-                        {"id": "t1", "description": "Padaria", "amount": -10.5,
-                         "date": "2026-08-02T00:00:00.000Z"}
+                        {
+                            "id": "t1",
+                            "description": "Padaria",
+                            "amount": -10.5,
+                            "date": "2026-08-02T00:00:00.000Z",
+                        }
                     ],
                     "next": page_2,
                 },
@@ -71,8 +75,12 @@ async def test_transactions_use_the_v2_endpoint_and_follow_the_cursor(
             200,
             json={
                 "results": [
-                    {"id": "t2", "description": "Soldo", "amount": 4200,
-                     "date": "2026-08-01T00:00:00.000Z"}
+                    {
+                        "id": "t2",
+                        "description": "Soldo",
+                        "amount": 4200,
+                        "date": "2026-08-01T00:00:00.000Z",
+                    }
                 ],
                 "next": None,
             },
@@ -119,7 +127,9 @@ async def test_transactions_surface_upstream_failures(
     client = _live_client(monkeypatch, handler)
 
     with caplog.at_level(logging.WARNING, logger="app.services.pluggy"):
-        with pytest.raises(UpstreamError, match="Pluggy transactions fetch failed") as raised:
+        with pytest.raises(
+            UpstreamError, match="Pluggy transactions fetch failed"
+        ) as raised:
             await client.fetch_transactions("acc-1")
 
     assert secret not in str(raised.value)

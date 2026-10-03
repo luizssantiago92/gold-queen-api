@@ -103,7 +103,9 @@ def categories(current_user: CurrentUser, session: SessionDep) -> CategoriesResp
 
 
 @router.get("/monthly-series", response_model=MonthlySeriesResponse)
-def monthly_series(current_user: CurrentUser, session: SessionDep) -> MonthlySeriesResponse:
+def monthly_series(
+    current_user: CurrentUser, session: SessionDep
+) -> MonthlySeriesResponse:
     user_id = require_id(current_user.id)
     _refresh_demo_if_needed(session, current_user)
 

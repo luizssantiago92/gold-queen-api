@@ -28,7 +28,14 @@ _RETRY_BACKOFF_SECONDS = 1.5
 
 # Gemini returns 503 when the flash tier is briefly saturated and 429 when the
 # free quota is throttled; both clear on their own, unlike a bad key or model.
-_TRANSIENT_MARKERS = ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "500", "INTERNAL")
+_TRANSIENT_MARKERS = (
+    "503",
+    "UNAVAILABLE",
+    "429",
+    "RESOURCE_EXHAUSTED",
+    "500",
+    "INTERNAL",
+)
 
 _PERSONA_BASE = (
     "You are the Gold Queen, Master of Coin and Sovereign of the Realm. "
@@ -104,7 +111,9 @@ class AIEngine:
         last_error: Exception | None = None
         for attempt in range(_MAX_ATTEMPTS):
             try:
-                completion = provider.complete(messages, temperature=0.2, max_tokens=None)
+                completion = provider.complete(
+                    messages, temperature=0.2, max_tokens=None
+                )
                 return completion.content or ""
             except Exception as exc:  # noqa: BLE001 - retried below when transient
                 last_error = exc
@@ -122,7 +131,9 @@ class AIEngine:
             raise last_error
         raise RuntimeError("AI provider failed without an exception")
 
-    def categorize(self, transactions: list[tuple[str, str, Decimal]]) -> tuple[dict[str, str], bool]:
+    def categorize(
+        self, transactions: list[tuple[str, str, Decimal]]
+    ) -> tuple[dict[str, str], bool]:
         """Categorize ``(id, description, amount)`` tuples.
 
         Returns the id -> category map and whether the AI output passed the guardrail.
@@ -146,7 +157,9 @@ class AIEngine:
         )
 
         try:
-            raw = self._generate(prompt, "You are a precise financial transaction classifier.")
+            raw = self._generate(
+                prompt, "You are a precise financial transaction classifier."
+            )
             batch = validate_output(raw, CategorizationBatch)
         except Exception as exc:  # noqa: BLE001 - a bad AI answer must never break the sync
             logger.warning("Categorization guardrail fallback: %s", exc)
@@ -166,7 +179,9 @@ class AIEngine:
 
         return mapping, True
 
-    def queen_tips(self, summary: str, locale: Locale = DEFAULT_LOCALE) -> tuple[QueenTips, bool]:
+    def queen_tips(
+        self, summary: str, locale: Locale = DEFAULT_LOCALE
+    ) -> tuple[QueenTips, bool]:
         if not self.enabled:
             return _fallback_tips(locale), False
 
@@ -218,7 +233,9 @@ class AIEngine:
             return False
 
 
-def _fallback_categories(transactions: list[tuple[str, str, Decimal]]) -> dict[str, str]:
+def _fallback_categories(
+    transactions: list[tuple[str, str, Decimal]],
+) -> dict[str, str]:
     mapping: dict[str, str] = {}
     for tx_id, description, amount in transactions:
         normalized = description.lower()
