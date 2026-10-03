@@ -1,0 +1,80 @@
+[project]
+name = "gold-queen-api"
+version = "1.0.0"
+description = "Open Finance aggregation API for the Gold Queen prototype."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.141.1",
+    "starlette==1.7.0",
+    "uvicorn[standard]==0.34.0",
+    "sqlmodel==0.0.22",
+    "psycopg2-binary==2.9.10",
+    "alembic==1.14.0",
+    "pydantic-settings==2.7.0",
+    "email-validator==2.2.0",
+    "python-dotenv==1.2.3",
+    "PyJWT==2.15.0",
+    "passlib[bcrypt]==1.7.4",
+    "bcrypt==4.0.1",
+    "httpx==0.28.1",
+    "python-multipart==0.0.32",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.16.10",
+    "mypy==2.4.0",
+    "types-passlib==1.7.7.20260211",
+    "coverage==7.16.2",
+    "pip-audit==2.10.1",
+]
+
+# Application repo: tests import `app` via pythonpath. Render still installs
+# requirements.txt with pip and does not build this project.
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+src = ["app", "tests", "scripts", "alembic"]
+extend-exclude = [".retornatus"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "ASYNC"]
+
+[tool.ruff.lint.per-file-ignores]
+# S101/S105/S106: tests assert and use fixture passwords.
+# S105: the JWT placeholder is rejected in production, and "bearer" is not a secret.
+# S311: the Pluggy offline simulator seeds random for deterministic sandbox data.
+"tests/**" = ["S101", "S105", "S106"]
+"app/core/config.py" = ["S105"]
+"app/schemas/auth.py" = ["S105"]
+"scripts/seed_demo_connection.py" = ["S105"]
+"app/services/pluggy.py" = ["S311"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.11"
+files = ["app", "tests"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

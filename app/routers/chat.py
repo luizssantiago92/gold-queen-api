@@ -8,7 +8,7 @@ from sqlmodel import select
 
 from app.api.deps import AIDep, CurrentUser, SessionDep
 from app.core.config import get_settings
-from app.models.entities import ChatCache
+from app.models.entities import ChatCache, require_id
 from app.schemas.advisor import ChatRequest, ChatResponse
 from app.services import rate_limit, treasury
 from app.services.chat_scope import is_chat_in_scope, off_topic_reply
@@ -29,7 +29,7 @@ def query(
     ai: AIDep,
     request: Request,
 ) -> ChatResponse:
-    user_id: int = current_user.id  # type: ignore[assignment]
+    user_id = require_id(current_user.id)
     subject_key = demo_quota_subject(current_user, request)
     settings = get_settings()
     today = date.today()

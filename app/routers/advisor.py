@@ -2,13 +2,14 @@
 
 import hashlib
 from datetime import date
+from typing import Annotated
 
 from fastapi import APIRouter, Header, Query, Request
 from sqlmodel import select
 
 from app.api.deps import AIDep, CurrentUser, SessionDep
 from app.core.locale import DEFAULT_LOCALE, Locale, parse_accept_language, parse_locale
-from app.models.entities import ChatCache
+from app.models.entities import ChatCache, require_id
 from app.schemas.advisor import QueenTipsResponse
 from app.services import rate_limit, treasury
 from app.services.demo_access import demo_quota_subject
@@ -24,12 +25,12 @@ def queen_tips(
     session: SessionDep,
     ai: AIDep,
     request: Request,
-    locale: Locale = Query(DEFAULT_LOCALE),
+    locale: Annotated[Locale, Query()] = DEFAULT_LOCALE,
     accept_language: str | None = Header(default=None, alias="Accept-Language"),
 ) -> QueenTipsResponse:
     resolved_locale = parse_locale(locale) if locale else parse_accept_language(accept_language)
     """Return today's diagnosis, reusing the cached one to spend zero extra tokens."""
-    user_id: int = current_user.id  # type: ignore[assignment]
+    user_id = require_id(current_user.id)
     subject_key = demo_quota_subject(current_user, request)
     summary = treasury.build_ai_summary(session, user_id)
 

@@ -7,9 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.config import get_settings
 from app.api.deps import SessionDep
-from app.services.ai import get_ai_engine
+from app.core.config import get_settings
 from app.core.database import init_db
 from app.core.exceptions import register_exception_handlers
 from app.routers import (
@@ -19,6 +18,7 @@ from app.routers import (
     connections_router,
     dashboard_router,
 )
+from app.services.ai import get_ai_engine
 
 
 @asynccontextmanager
@@ -78,7 +78,7 @@ def create_app() -> FastAPI:
         # workflow sends ?db=1 so the free Supabase project sees real activity.
         if db:
             try:
-                session.exec(text("SELECT 1"))
+                session.execute(text("SELECT 1"))
                 body["database"] = "ok"
             except SQLAlchemyError:
                 body["status"] = "degraded"

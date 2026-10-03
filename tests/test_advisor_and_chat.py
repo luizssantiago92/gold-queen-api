@@ -123,7 +123,7 @@ def test_health_db_probe_returns_503_when_database_fails(
     def broken(*_args: object, **_kwargs: object) -> None:
         raise OperationalError("SELECT 1", {}, Exception("connection refused"))
 
-    monkeypatch.setattr(session, "exec", broken)
+    monkeypatch.setattr(session, "execute", broken)
 
     response = client.get("/health", params={"db": 1})
     assert response.status_code == 503

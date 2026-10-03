@@ -32,7 +32,7 @@ The public demo uses **Pluggy Sandbox** data and intentional UI limits (one pre-
 | Database | PostgreSQL (Supabase in prod) / SQLite (local tests) |
 | Migrations | Alembic |
 | Open Finance | Pluggy API (`/v2/transactions`) |
-| AI | Google GenAI SDK (`gemini-3.6-flash`) |
+| AI | Gemini REST API via httpx (`gemini-3.6-flash`, provider adapter) |
 | Auth | JWT (PyJWT + bcrypt) |
 | Quality | pytest, ruff, GitHub Actions |
 

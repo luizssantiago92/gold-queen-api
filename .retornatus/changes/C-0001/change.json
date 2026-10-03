@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0001",
+  "title": "Centralize tool config, format, and clear mypy",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Audit items API-M10 and API-M3: no pyproject.toml, ruff pinned at 0.8.4, unformatted Python, four mypy errors, many type-ignore comments, and an unused google-genai dependency while the README names the Google GenAI SDK.",
+    "kind": "MAINTENANCE"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-03T05:13:09.642293Z"
+}

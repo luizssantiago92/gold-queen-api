@@ -118,7 +118,9 @@ class AIEngine:
                 )
                 time.sleep(_RETRY_BACKOFF_SECONDS * (attempt + 1))
 
-        raise last_error  # type: ignore[misc]
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("AI provider failed without an exception")
 
     def categorize(self, transactions: list[tuple[str, str, Decimal]]) -> tuple[dict[str, str], bool]:
         """Categorize ``(id, description, amount)`` tuples.

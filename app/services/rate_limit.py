@@ -30,24 +30,24 @@ def _get_or_create_usage(
 ) -> ChatUsage | DemoChatUsage:
     """Normal users share one row. A non-empty subject is a demo visitor."""
     if subject_key:
-        usage = session.exec(
+        demo_usage = session.exec(
             select(DemoChatUsage).where(
                 DemoChatUsage.user_id == user_id,
                 DemoChatUsage.usage_date == usage_date,
                 DemoChatUsage.subject_key == subject_key,
             )
         ).first()
-        if usage is None:
-            usage = DemoChatUsage(
+        if demo_usage is None:
+            demo_usage = DemoChatUsage(
                 user_id=user_id,
                 usage_date=usage_date,
                 subject_key=subject_key,
                 request_count=0,
             )
-            session.add(usage)
+            session.add(demo_usage)
             session.commit()
-            session.refresh(usage)
-        return usage
+            session.refresh(demo_usage)
+        return demo_usage
 
     usage = session.exec(
         select(ChatUsage).where(

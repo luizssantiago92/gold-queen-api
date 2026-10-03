@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.deps import AIDep, CurrentUser, PluggyDep, SessionDep
 from app.core.config import get_settings
+from app.models.entities import require_id
 from app.schemas.connections import (
     ConnectionResponse,
     ConnectTokenResponse,
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/v1/connections", tags=["connections"])
 
 @router.get("", response_model=list[ConnectionResponse])
 def list_connections(current_user: CurrentUser, session: SessionDep):
-    return user_connections(session, current_user.id)  # type: ignore[arg-type]
+    return user_connections(session, require_id(current_user.id))
 
 
 @router.post("/connect", response_model=ConnectTokenResponse)
@@ -30,8 +31,9 @@ async def create_connect_token(
 ) -> ConnectTokenResponse:
     """Issue a Pluggy Connect token, enforcing the Free plan quota first."""
     ensure_not_demo(current_user)
-    used = sync_service.ensure_connection_quota(session, current_user.id)  # type: ignore[arg-type]
-    token = await pluggy.create_connect_token(str(current_user.id))
+    user_id = require_id(current_user.id)
+    used = sync_service.ensure_connection_quota(session, user_id)
+    token = await pluggy.create_connect_token(str(user_id))
 
     return ConnectTokenResponse(
         connect_token=token,
@@ -50,7 +52,7 @@ def delete_connection(
     ensure_not_demo(current_user)
     sync_service.delete_connection(
         session,
-        current_user.id,  # type: ignore[arg-type]
+        require_id(current_user.id),
         connection_id,
     )
 
@@ -66,7 +68,7 @@ async def sync_connection(
     ensure_not_demo(current_user)
     result = await sync_service.sync_item(
         session=session,
-        user_id=current_user.id,  # type: ignore[arg-type]
+        user_id=require_id(current_user.id),
         item_id=payload.item_id,
         pluggy=pluggy,
         ai=ai,

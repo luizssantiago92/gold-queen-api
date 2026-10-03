@@ -81,10 +81,10 @@ def delete_connection(session: Session, user_id: int, connection_id: int) -> Non
     # instead would let the unit of work emit them in any order, and Postgres
     # rejects removing an account while its transactions still reference it.
     if account_ids:
-        session.exec(
+        session.execute(
             delete(Transaction).where(col(Transaction.account_id).in_(account_ids))
         )
-        session.exec(delete(Account).where(col(Account.id).in_(account_ids)))
+        session.execute(delete(Account).where(col(Account.id).in_(account_ids)))
 
     session.delete(connection)
     session.commit()
@@ -176,7 +176,7 @@ async def sync_item(
 
         if account is None:
             account = Account(
-                connection_id=connection.id,  # type: ignore[arg-type]
+                connection_id=connection.id,
                 pluggy_account_id=remote_account.account_id,
                 name=remote_account.name,
                 account_type=remote_account.account_type,
@@ -204,7 +204,7 @@ async def sync_item(
                 continue
             new_transactions.append(
                 Transaction(
-                    account_id=account.id,  # type: ignore[arg-type]
+                    account_id=account.id,
                     pluggy_transaction_id=remote_tx.transaction_id,
                     description=remote_tx.description,
                     amount=remote_tx.amount,

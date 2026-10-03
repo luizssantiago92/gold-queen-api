@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0001",
+  "version": 1,
+  "what": "Add pyproject.toml for ruff, pytest, mypy, and coverage; keep requirements files for Render and CI; bump ruff to the current release; format Python in its own commit and record that SHA in .git-blame-ignore-revs; fix the four mypy errors and narrow persisted ids without changing behavior; add mypy and format check to CI; remove google-genai and correct the README. Constraints: do not change runtime behavior; do not squash the format commit; keep requirements files because Render and CI install from them.",
+  "constraints": [],
+  "done_criteria": [
+    "pytest, ruff check, and mypy pass for app and tests",
+    "README documents Gemini REST via httpx, not the GenAI SDK.",
+    "The format-only commit is documented in .git-blame-ignore-revs.",
+    "A review note covers the CI workflow tool steps."
+  ],
+  "active": true,
+  "activated_at": "2026-10-03T05:13:09.651249Z"
+}

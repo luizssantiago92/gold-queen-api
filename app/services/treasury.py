@@ -3,7 +3,7 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.config import get_settings
 from app.models.entities import Account, BankConnection, Transaction
@@ -37,7 +37,7 @@ def user_connections(session: Session, user_id: int) -> list[BankConnection]:
 def user_accounts(session: Session, user_id: int) -> list[tuple[Account, BankConnection]]:
     rows = session.exec(
         select(Account, BankConnection)
-        .join(BankConnection, Account.connection_id == BankConnection.id)  # type: ignore[arg-type]
+        .join(BankConnection, col(Account.connection_id) == col(BankConnection.id))
         .where(BankConnection.user_id == user_id)
     ).all()
     return [(account, connection) for account, connection in rows]
@@ -51,8 +51,8 @@ def user_transaction_rows(
 ) -> list[tuple[Transaction, Account, BankConnection]]:
     statement = (
         select(Transaction, Account, BankConnection)
-        .join(Account, Transaction.account_id == Account.id)  # type: ignore[arg-type]
-        .join(BankConnection, Account.connection_id == BankConnection.id)  # type: ignore[arg-type]
+        .join(Account, col(Transaction.account_id) == col(Account.id))
+        .join(BankConnection, col(Account.connection_id) == col(BankConnection.id))
         .where(BankConnection.user_id == user_id)
     )
     if start is not None:
@@ -60,7 +60,8 @@ def user_transaction_rows(
     if end is not None:
         statement = statement.where(Transaction.transaction_date < end)
 
-    rows = session.exec(statement.order_by(Transaction.transaction_date.desc())).all()  # type: ignore[attr-defined]
+    ordered = statement.order_by(col(Transaction.transaction_date).desc())
+    rows = session.exec(ordered).all()
     return [(transaction, account, connection) for transaction, account, connection in rows]
 
 
