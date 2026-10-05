@@ -143,8 +143,8 @@ class DemoChatUsage(SQLModel, table=True):
 
     Normal accounts keep a single ``chat_usage`` row. The public demo is one
     user seen by many visitors, so its counter is split by client address.
-    A new table (not a new column) is created by ``create_all`` on startup,
-    which leaves databases that already exist able to boot.
+    Alembic revision ``c7a1b5e0d942`` creates the table. SQLite startup
+    creates it with ``create_all``; Postgres startup does not.
     """
 
     __tablename__ = "demo_chat_usage"

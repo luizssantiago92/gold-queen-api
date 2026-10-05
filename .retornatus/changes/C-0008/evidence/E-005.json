@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "C-0008/E-005",
+  "type": "test_result",
+  "subject": "The README describes the same Alembic source of truth for Postgres and that SQLi",
+  "source": "pytest",
+  "producer": "retornatus",
+  "observed_at": "2026-10-05T16:09:51.363774Z",
+  "subject_state": "commit:7db4fc78c60c5f73ce534072313498d381edf193",
+  "provenance": "executed",
+  "command": [
+    "uv",
+    "run",
+    "pytest",
+    "-q"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-10-05T16:09:19.501486Z",
+  "ended_at": "2026-10-05T16:09:51.042850Z",
+  "duration_ms": 31541,
+  "output_sha256": "0b403b7569c97ce0876e9d819779e5ef3115f5dc6fe7aed3e00a329c1c793123",
+  "output_tail": "........................................................................ [ 40%]\n........................................................................ [ 81%]\n................................                                         [100%]\n=============================== warnings summary ===============================\ntests/test_database.py::test_alembic_head_matches_models_on_a_fresh_postgres\ntests/test_database.py::test_alembic_head_matches_models_on_a_fresh_postgres\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\n  /workspace/.venv/lib/python3.12/site-packages/alembic/config.py:604: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.\n    util.warn_deprecated(\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n",
+  "output_artifact": ".retornatus/changes/C-0008/evidence/E-005.output.txt",
+  "git_commit": "7db4fc78c60c5f73ce534072313498d381edf193",
+  "worktree_dirty": false,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0008/claim-done-6",
+      "note": null
+    }
+  ]
+}

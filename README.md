@@ -34,7 +34,7 @@ flowchart LR
   API --> Gemini[Gemini]
 ```
 
-The HTTP process stores no session. JWTs carry identity. Treasury rows and AI caches live in Postgres. Local runs and the test suite use SQLite when `DATABASE_URL` is unset. Without Pluggy credentials the sync path uses a deterministic sandbox. Without a Gemini key, categorization and advice use rule-based fallbacks and set `is_guarded` to false.
+The HTTP process stores no session. JWTs carry identity. Treasury rows and AI caches live in Postgres. Alembic is the only Postgres schema source: a fresh database runs `alembic upgrade head`, and startup does not create those tables. Local runs and the test suite use SQLite when `DATABASE_URL` is unset, and that startup creates the tables. Without Pluggy credentials the sync path uses a deterministic sandbox. Without a Gemini key, categorization and advice use rule-based fallbacks and set `is_guarded` to false.
 
 ## What a backend review will find
 
@@ -44,7 +44,7 @@ The HTTP process stores no session. JWTs carry identity. Treasury rows and AI ca
 - **Sync.** A transaction is inserted only when its `pluggy_transaction_id` is new, so a repeat sync reports `transactions_synced: 0` for rows already stored and still updates balances. Connect and sync run in a worker thread. Pluggy HTTP is scheduled back onto the event loop. A first sync of a live item must match Pluggy's `clientUserId`.
 - **Tests.** pytest, ruff, mypy, and `pip-audit` run in CI. Branch coverage fails under 85, set in `pyproject.toml`. There is no hosted coverage badge.
 - **CI.** Third-party actions are pinned to commit SHAs. CodeQL analyzes Python and GitHub Actions. Dependabot opens weekly updates for pip and actions. Workflow tokens are `contents: read`.
-- **Retornatus.** Behavior changes have a contract and evidence under `.retornatus/changes/` (C-0001 through C-0007). Pull requests run the `retornatus-gates` check.
+- **Retornatus.** Behavior changes have a contract and evidence under `.retornatus/changes/` (C-0001 through C-0008). Pull requests run the `retornatus-gates` check.
 
 Every response sends `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, and `Strict-Transport-Security: max-age=31536000; includeSubDomains`. There is no `Content-Security-Policy`, so Swagger UI at `/docs` still loads.
 
@@ -54,7 +54,7 @@ Every response sends `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-ref
 | --- | --- |
 | Language | Python 3.11+ |
 | API | FastAPI, Pydantic v2 |
-| Data | SQLModel, Alembic, PostgreSQL (Supabase) / SQLite locally |
+| Data | SQLModel. Alembic owns the Postgres schema. SQLite (local and tests) creates tables on startup. |
 | Open Finance | Pluggy (`/v2/transactions`), offline simulator when credentials are absent |
 | AI | Gemini via httpx (`gemini-3.6-flash`), schema guardrails in `app/core/ai_guardrails.py` |
 | Auth | PyJWT, bcrypt |
@@ -78,7 +78,7 @@ Docs: http://127.0.0.1:8000/docs
 
 On Windows, activate the venv with `.venv\Scripts\activate`.
 
-Copying `.env.example` sets `DATABASE_URL` to the Postgres in `docker-compose.yml`. Postgres setup, Render, and Supabase are in [docs/deployment.md](docs/deployment.md). `python -m app.seed` creates users only. Linking a sandbox bank is described in [docs/demo-operations.md](docs/demo-operations.md). That script calls connect and sync as the demo user, so it cannot refresh a deploy where the read-only guard is on.
+Copying `.env.example` sets `DATABASE_URL` to the Postgres in `docker-compose.yml`. Run `alembic upgrade head` before `python -m app.seed` on that database. Production Supabase was created outside Alembic; the one-time step there is `alembic stamp head`, described in [docs/deployment.md](docs/deployment.md). `python -m app.seed` creates users only. Linking a sandbox bank is described in [docs/demo-operations.md](docs/demo-operations.md). That script calls connect and sync as the demo user, so it cannot refresh a deploy where the read-only guard is on.
 
 ## Try it in 1 minute
 

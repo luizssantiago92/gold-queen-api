@@ -16,7 +16,11 @@ DEMO_USERS: tuple[tuple[str, str, str], ...] = (
 
 
 def seed_demo_users() -> list[str]:
-    """Create the demo accounts if they do not exist. Returns created emails."""
+    """Create the demo accounts if they do not exist. Returns created emails.
+
+    On SQLite this also creates the tables. On Postgres the schema must
+    already be at Alembic head.
+    """
     init_db()
     created: list[str] = []
 

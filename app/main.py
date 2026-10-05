@@ -28,7 +28,8 @@ from app.services.ai import get_ai_engine
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # create_all is synchronous SQL. The lifespan itself is async, so the
+    # init_db is synchronous. SQLite creates tables here. Postgres does not
+    # connect: its schema comes from Alembic. The lifespan is async, so the
     # call has to leave the loop or startup stalls every other task.
     await run_in_threadpool(init_db)
     yield

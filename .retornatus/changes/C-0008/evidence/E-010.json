@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0008/E-010",
+  "type": "repository_observation",
+  "subject": "This schema change is documented under CHANGELOG Unreleased and the version fiel",
+  "source": "CHANGELOG.md Unreleased records that the Postgres schema comes only from Alembic and that startup create_all runs for SQLite. pyproject.toml version stays 1.0.0.",
+  "producer": "agent",
+  "observed_at": "2026-10-05T16:10:38.184970Z",
+  "subject_state": "commit:7db4fc78c60c5f73ce534072313498d381edf193",
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0008/claim-done-7",
+      "note": null
+    }
+  ]
+}
