@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0008",
+  "version": 1,
+  "what": "Call SQLModel.metadata.create_all only when the database URL backend is SQLite, which covers local quick-start and tests. On Postgres, including production, startup must not create or alter tables; the schema comes only from Alembic. Confirm that the current Alembic head matches the SQLModel models on a fresh Postgres. Document one schema source of truth: fresh databases run alembic upgrade head; an existing database created outside Alembic is aligned once with alembic stamp head after the schema is confirmed to match; every later schema change is a new Alembic migration applied with alembic upgrade head before or with the deploy. State that row-level security is already enabled on the six Supabase tables. Record the change in CHANGELOG Unreleased. Do not add a migration unless the models and head differ, do not bump the package version, and do not touch production.",
+  "constraints": [],
+  "done_criteria": [
+    "Process startup calls SQLModel.metadata.create_all only when the database URL backend is SQLite.",
+    "A Postgres database URL does not call create_all and does not issue schema DDL at startup.",
+    "Tests cover the SQLite create_all branch and the Postgres skip branch.",
+    "On a fresh Postgres, alembic upgrade head followed by alembic check reports no model drift. The head revision stays c7a1b5e0d942 unless a migration was required to remove drift.",
+    "docs/deployment.md states that Alembic is the only schema source, that a fresh database runs alembic upgrade head, that an existing database created outside Alembic is aligned once with alembic stamp head after the schema matches, and that later schema changes are new migrations applied with alembic upgrade head. It states that RLS is already enabled on the six Supabase tables.",
+    "The README describes the same Alembic source of truth for Postgres and that SQLite local and test startup still creates tables.",
+    "CHANGELOG Unreleased lists this change and the package version stays 1.0.0."
+  ],
+  "active": true,
+  "activated_at": "2026-10-05T15:59:50.949250Z"
+}

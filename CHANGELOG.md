@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Postgres schema comes only from Alembic. Startup `create_all` runs for SQLite (local quick-start and tests) and does not run against Postgres. An existing Supabase database is aligned once with `alembic stamp head`; a fresh database uses `alembic upgrade head`.
 - Queen's Tips honor `Accept-Language` when the `locale` query is omitted. An explicit `locale` still wins.
 - The tips cache is stored as JSON. A legacy row that cannot be parsed is a cache miss.
 - `GET /v1/dashboard/transactions` pages with SQL `OFFSET`/`LIMIT` and `COUNT`.

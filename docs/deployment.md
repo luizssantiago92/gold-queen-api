@@ -12,9 +12,29 @@ The project already exists:
 | API URL | `https://ogzmhbjadcoffaneolav.supabase.co` |
 | Plan | Free (USD 0.00 / month) |
 
-The initial schema (`users`, `bank_connections`, `accounts`, `transactions`, `chat_cache`, `chat_usage`) is already applied.
+Alembic (`alembic/versions`) is the only schema source. Startup calls `SQLModel.metadata.create_all` only when the database is SQLite (local quick-start and tests). Postgres startup does not connect and does not create or alter tables.
 
-To point the API at it:
+**Fresh database.** An empty Postgres, including the one from `docker-compose.yml`, is built with:
+
+```bash
+alembic upgrade head
+```
+
+Head is `c7a1b5e0d942`. Render starts uvicorn and does not run migrations, so apply them before or with the deploy that needs them.
+
+**This production database.** It was created by the Supabase migrations `initial_schema` and `enable_row_level_security`, not by Alembic, and it has no `alembic_version` table. Do not run `alembic upgrade head` there: that tries to create tables that already exist.
+
+Revision `c7a1b5e0d942` is already applied by hand: unique constraints `uq_chat_usage_user_date` on `chat_usage (user_id, usage_date)` and `uq_demo_chat_usage_subject_date` on `demo_chat_usage (user_id, subject_key, usage_date)`, and these six columns as `timestamptz`: `users.created_at`, `bank_connections.last_synced_at`, `bank_connections.created_at`, `accounts.updated_at`, `transactions.created_at`, `chat_cache.created_at`.
+
+After confirming the live schema still matches that revision, record it once. The command writes `alembic_version` and does not change tables:
+
+```bash
+alembic stamp head
+```
+
+**Later schema changes.** Each one is a new Alembic revision, applied with `alembic upgrade head` before or with the deploy. Process startup does not change the Postgres schema.
+
+To point the API at Supabase:
 
 1. Get the database password in **Project Settings → Database**. Use **Reset database password** if it was never stored.
 2. Build the connection string using the **Session Pooler** host and the `psycopg2` driver:
@@ -32,31 +52,20 @@ Two details that differ from what the Supabase dashboard shows by default:
 
 On Windows the failure is easy to misread: psycopg2 tries to decode the server error message using the local code page and raises `UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe3` instead of the real connection error. If you see that, suspect connectivity, not credentials.
 
-3. Set it as `DATABASE_URL`, then create the demo users:
+3. Set it as `DATABASE_URL`. On a fresh database, run `alembic upgrade head` first, then create the demo users. On this production database, `alembic stamp head` once (see above) is the schema step; the tables are already there.
 
 ```bash
 python -m app.seed
 ```
 
-Future schema changes go through Alembic. Render starts uvicorn and does not run migrations, so apply each revision yourself against the production `DATABASE_URL` before the new code depends on it:
-
-```bash
-alembic upgrade head
-```
-
 ### Row Level Security
 
-The frontend never talks to Supabase directly: it only calls this API, which connects over the direct Postgres connection string. The Supabase anon key is therefore never published, and authorization is enforced by the API through JWT.
+RLS is already enabled on `users`, `bank_connections`, `accounts`, `transactions`, `chat_cache`, and `chat_usage` by the Supabase migration `enable_row_level_security`. The frontend never talks to Supabase directly. The API connects as the table owner, which bypasses RLS, so no policies are required.
 
-Even so, RLS should be enabled so the auto-generated PostgREST endpoints reject the anon and authenticated roles. No policies are needed, because the API connects as the table owner, which bypasses RLS.
+`demo_chat_usage` comes from Alembic, not from that migration. Startup used to enable RLS on it and no longer issues DDL. If that table does not already have RLS, enable it once in the Supabase SQL editor:
 
 ```sql
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bank_connections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_cache ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.demo_chat_usage ENABLE ROW LEVEL SECURITY;
 ```
 
 ## API host — Render
@@ -122,5 +131,6 @@ Two failure modes look identical from the outside and are worth ruling out first
 - [ ] `POST /v1/connections/connect` as the demo user returns `403` / `demo_read_only`
 - [ ] `ALLOW_REGISTRATION` is unset or `false` on the live service, unless public signup should be open
 - [ ] The frontend origin is present in `CORS_ORIGINS`
+- [ ] The schema step matches the database: `alembic upgrade head` on a fresh Postgres, or `alembic stamp head` once on the existing Supabase database (`alembic_version` = `c7a1b5e0d942`)
 - [ ] `JWT_SECRET` is not the default placeholder and is at least 32 characters (`ENVIRONMENT=production` will not boot otherwise)
 - [ ] `CORS_ORIGIN_REGEX` is unset or anchored to `VERCEL_TEAM_SLUG` (not `gold-queen-web-*`)

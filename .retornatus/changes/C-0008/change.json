@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0008",
+  "title": "Single source of truth for the database schema",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Finding API-M4: the FastAPI lifespan calls SQLModel.metadata.create_all, so production Postgres can diverge from Alembic. The production Supabase database was created by Supabase migrations, has no alembic_version table, and revision c7a1b5e0d942 was already applied by hand. Register this as the next Retornatus Change after C-0007, open one pull request titled chore(db): single source of truth for schema, and do not merge it.",
+    "kind": "MAINTENANCE"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-05T15:59:50.940448Z"
+}
