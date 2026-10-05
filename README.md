@@ -1,5 +1,7 @@
 # Gold Queen API
 
+![Gold Queen](docs/queen-logo.webp)
+
 FastAPI backend that aggregates Open Finance accounts, categorizes transactions, and answers questions about that treasury. It is the data layer for [gold-queen-web](https://github.com/luizssantiago92/gold-queen-web).
 
 [![CI](https://github.com/luizssantiago92/gold-queen-api/actions/workflows/ci.yml/badge.svg)](https://github.com/luizssantiago92/gold-queen-api/actions/workflows/ci.yml)
@@ -42,7 +44,7 @@ The HTTP process stores no session. JWTs carry identity. Treasury rows and AI ca
 - **Sync.** A transaction is inserted only when its `pluggy_transaction_id` is new, so a repeat sync reports `transactions_synced: 0` for rows already stored and still updates balances. Connect and sync run in a worker thread. Pluggy HTTP is scheduled back onto the event loop. A first sync of a live item must match Pluggy's `clientUserId`.
 - **Tests.** pytest, ruff, mypy, and `pip-audit` run in CI. Branch coverage fails under 85, set in `pyproject.toml`. There is no hosted coverage badge.
 - **CI.** Third-party actions are pinned to commit SHAs. CodeQL analyzes Python and GitHub Actions. Dependabot opens weekly updates for pip and actions. Workflow tokens are `contents: read`.
-- **Retornatus.** Behavior changes have a contract and evidence under `.retornatus/changes/` (C-0001 through C-0005). Pull requests run the `retornatus-gates` check.
+- **Retornatus.** Behavior changes have a contract and evidence under `.retornatus/changes/` (C-0001 through C-0007). Pull requests run the `retornatus-gates` check.
 
 Every response sends `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, and `Strict-Transport-Security: max-age=31536000; includeSubDomains`. There is no `Content-Security-Policy`, so Swagger UI at `/docs` still loads.
 
@@ -77,6 +79,17 @@ Docs: http://127.0.0.1:8000/docs
 On Windows, activate the venv with `.venv\Scripts\activate`.
 
 Copying `.env.example` sets `DATABASE_URL` to the Postgres in `docker-compose.yml`. Postgres setup, Render, and Supabase are in [docs/deployment.md](docs/deployment.md). `python -m app.seed` creates users only. Linking a sandbox bank is described in [docs/demo-operations.md](docs/demo-operations.md). That script calls connect and sync as the demo user, so it cannot refresh a deploy where the read-only guard is on.
+
+## Try it in 1 minute
+
+Use the demo account `queen@goldqueen.dev` / `QueenDemo123!`.
+
+1. Open the [live docs](https://gold-queen-api.onrender.com/docs), or http://127.0.0.1:8000/docs after the commands above.
+2. Execute `POST /v1/auth/login` with that email and password. Copy `access_token`.
+3. Click **Authorize**, paste the token, and confirm.
+4. Execute `GET /v1/dashboard/overview`. The body is that account's balances and the current month.
+
+![Swagger UI for Gold Queen API](docs/swagger-ui.webp)
 
 ## Environment
 

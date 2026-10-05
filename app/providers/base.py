@@ -20,14 +20,18 @@ class ProviderError(Exception):
         *,
         status_code: int | None = None,
         timed_out: bool = False,
+        retry_after_seconds: float | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.timed_out = timed_out
+        self.retry_after_seconds = retry_after_seconds
 
     @property
     def is_retryable(self) -> bool:
         if self.timed_out:
+            return True
+        if self.status_code == 429:
             return True
         return self.status_code is not None and self.status_code >= 500
 

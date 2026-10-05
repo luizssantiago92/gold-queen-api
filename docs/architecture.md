@@ -60,7 +60,7 @@ Relationships: `User` → `BankConnection` → `Account` → `Transaction`.
 
 ## Dashboard aggregation
 
-All dashboard routes call `maybe_refresh_demo()` for demo emails, then:
+Demo accounts slide stale transaction dates forward on login (`maybe_refresh_demo`). Dashboard routes then only read:
 
 - **Overview** — sum balances, compute month income/expenses.
 - **Categories** — group current-month expenses by `display_category`.

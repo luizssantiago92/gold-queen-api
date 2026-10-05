@@ -38,7 +38,7 @@ On Windows the failure is easy to misread: psycopg2 tries to decode the server e
 python -m app.seed
 ```
 
-Future schema changes go through Alembic:
+Future schema changes go through Alembic. Render starts uvicorn and does not run migrations, so apply each revision yourself against the production `DATABASE_URL` before the new code depends on it:
 
 ```bash
 alembic upgrade head

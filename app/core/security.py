@@ -20,6 +20,13 @@ from app.core.exceptions import AuthenticationError
 BCRYPT_ROUNDS = 12
 BCRYPT_MAX_PASSWORD_BYTES = 72
 
+# A real 12-round bcrypt hash used only when the email is not registered.
+# Login still rejects that request. The check exists so the missing-user path
+# spends the same password verification as a wrong password.
+UNKNOWN_EMAIL_BCRYPT_HASH = (
+    "$2b$12$i4JenkQrauMKUOM2hJ6iq.55osq9Ve5PPeneBbyChX4B7oAIUFEty"
+)
+
 
 def _password_bytes(plain_password: str) -> bytes:
     encoded = plain_password.encode("utf-8")

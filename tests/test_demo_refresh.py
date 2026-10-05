@@ -3,8 +3,10 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+from app.core.security import create_access_token, hash_password
 from app.models.entities import Account, BankConnection, Transaction, User, require_id
 from app.services.demo_refresh import maybe_refresh_demo, refresh_demo_transaction_dates
 
@@ -66,6 +68,45 @@ def test_refresh_shifts_stale_dates_into_current_month(session: Session) -> None
     assert transaction is not None
     assert transaction.transaction_date.month == date.today().month
     assert transaction.transaction_date <= date.today()
+
+
+def test_login_refreshes_demo_dates_and_dashboard_reads_do_not(
+    client: TestClient, session: Session
+) -> None:
+    password = "QueenDemo123!"
+    user = User(
+        email="queen@goldqueen.dev",
+        display_name="Queen",
+        password_hash=hash_password(password),
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    stale = date.today().replace(day=1) - timedelta(days=40)
+    _seed_transaction(session, user, stale)
+
+    client.headers.update(
+        {"Authorization": f"Bearer {create_access_token(str(require_id(user.id)))}"}
+    )
+    assert client.get("/v1/dashboard/overview").status_code == 200
+    session.expire_all()
+    untouched = session.exec(
+        select(Transaction).where(Transaction.pluggy_transaction_id == "tx-demo")
+    ).one()
+    assert untouched.transaction_date == stale
+
+    login = client.post(
+        "/v1/auth/login",
+        json={"email": user.email, "password": password},
+    )
+    assert login.status_code == 200
+    session.expire_all()
+    shifted = session.exec(
+        select(Transaction).where(Transaction.pluggy_transaction_id == "tx-demo")
+    ).one()
+    assert shifted.transaction_date != stale
+    assert shifted.transaction_date.month == date.today().month
 
 
 def test_maybe_refresh_ignores_non_demo_users(session: Session) -> None:

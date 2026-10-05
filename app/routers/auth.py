@@ -11,8 +11,13 @@ from app.core.exceptions import (
     RegistrationDisabledError,
 )
 from app.core.login_rate_limit import enforce_login_rate_limit
-from app.core.security import create_access_token, hash_password, verify_password
-from app.models.entities import User
+from app.core.security import (
+    UNKNOWN_EMAIL_BCRYPT_HASH,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
+from app.models.entities import User, require_id
 from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
@@ -20,6 +25,7 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.schemas.errors import error_responses
+from app.services.demo_refresh import maybe_refresh_demo
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
@@ -74,8 +80,14 @@ def login(
 ) -> TokenResponse:
     enforce_login_rate_limit(request)
     user = session.exec(select(User).where(User.email == payload.email)).first()
-    if user is None or not verify_password(payload.password, user.password_hash):
+    # Unknown emails still pay for a bcrypt check so the response time does not
+    # reveal whether the address is registered.
+    stored_hash = user.password_hash if user is not None else UNKNOWN_EMAIL_BCRYPT_HASH
+    password_matches = verify_password(payload.password, stored_hash)
+    if user is None or not password_matches:
         raise AuthenticationError("Invalid email or password.")
+
+    maybe_refresh_demo(session, user.email, require_id(user.id))
 
     return TokenResponse(
         access_token=create_access_token(str(user.id)),
