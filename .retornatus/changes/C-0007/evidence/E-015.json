@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0007/E-015",
+  "type": "review_result",
+  "subject": "A review note covers the migration that dedupes quota rows and stores timestamps",
+  "source": "Reviewed alembic/versions/c7a1b5e0d942_quota_and_timestamptz.py. Upgrade sums duplicate chat_usage and demo_chat_usage request_count values into the oldest id, deletes only those extra quota rows, then adds uq_chat_usage_user_date and uq_demo_chat_usage_subject_date with batch_alter_table so SQLite and Postgres both apply. demo_chat_usage is created only when missing. On Postgres the six timestamp columns become timestamptz with AT TIME ZONE UTC, so existing naive values are read as UTC; the conversion is skipped when the type is already timestamptz. No treasury table is deleted. Downgrade restores naive UTC clock time and drops the unique constraints. It does not restore merged-away duplicates and does not drop demo_chat_usage. Render does not run Alembic; the owner runs alembic upgrade head once after merge.",
+  "producer": "agent",
+  "observed_at": "2026-10-05T03:31:34.370295Z",
+  "subject_state": "commit:dca4233388bec8f44b61841cff2dc8025b9c2959",
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0007/claim-done-12",
+      "note": null
+    }
+  ]
+}
