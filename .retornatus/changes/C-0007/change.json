@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0007",
+  "title": "Harden quotas, tips cache, and pagination",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Audit items API-B1, API-B2, API-B3, API-B4, API-B5, API-B6, API-B9, API-B10, and API-B11 are still present on main. The bcrypt replacement from C-0004 and the security headers from C-0003 stay as they are. Fix the open items, cover them with tests, add one Alembic migration that is safe for the production Supabase database, polish the README, and record the work as a new Change. Do not bump the package version and do not merge.",
+    "kind": "BUG"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-05T03:00:26.790737Z"
+}

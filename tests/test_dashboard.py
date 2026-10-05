@@ -1,8 +1,11 @@
 """Dashboard aggregation tests (RF03)."""
 
+import re
 from datetime import date
 
 from fastapi.testclient import TestClient
+from sqlalchemy import event
+from sqlmodel import Session
 
 
 def test_overview_is_empty_before_any_sync(auth_client: TestClient) -> None:
@@ -108,6 +111,54 @@ def test_transactions_are_paginated_and_carry_guardrail_flag(
     first = body["items"][0]
     assert "is_guarded" in first
     assert first["institution_name"]
+
+
+def test_transaction_pages_use_sql_offset_and_count(
+    auth_client: TestClient, session: Session
+) -> None:
+    auth_client.post(
+        "/v1/connections/sync", json={"item_id": "11111111-1111-4111-8111-111111111111"}
+    )
+    statements: list[str] = []
+
+    def _capture(
+        _conn: object,
+        _cursor: object,
+        statement: str,
+        _parameters: object,
+        _context: object,
+        _executemany: bool,
+    ) -> None:
+        statements.append(statement)
+
+    event.listen(session.get_bind(), "before_cursor_execute", _capture)
+    try:
+        body = auth_client.get("/v1/dashboard/transactions?page=2&limit=5").json()
+    finally:
+        event.remove(session.get_bind(), "before_cursor_execute", _capture)
+
+    rendered = "\n".join(statements).lower()
+    assert "limit" in rendered
+    assert "offset" in rendered
+    assert "count" in rendered
+    assert body["page"] == 2
+    assert body["limit"] == 5
+    assert body["total"] >= len(body["items"])
+    assert isinstance(body["items"], list)
+
+
+def test_transaction_created_at_includes_a_timezone_offset(
+    auth_client: TestClient,
+) -> None:
+    auth_client.post(
+        "/v1/connections/sync", json={"item_id": "11111111-1111-4111-8111-111111111111"}
+    )
+    listing = auth_client.get("/v1/dashboard/transactions?page=1&limit=1").json()
+    transaction_id = listing["items"][0]["id"]
+    created_at = auth_client.get(f"/v1/dashboard/transactions/{transaction_id}").json()[
+        "created_at"
+    ]
+    assert re.search(r"(Z|[+-]\d{2}:\d{2})$", created_at)
 
 
 def test_transactions_second_page_differs(auth_client: TestClient) -> None:

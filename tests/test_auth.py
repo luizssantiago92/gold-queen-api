@@ -10,7 +10,12 @@ from starlette.requests import Request
 from app.core.config import get_settings
 from app.core.exceptions import AuthenticationError, LoginRateLimitError
 from app.core.login_rate_limit import enforce_login_rate_limit, login_client_key
-from app.core.security import create_access_token, decode_access_token
+from app.core.security import (
+    UNKNOWN_EMAIL_BCRYPT_HASH,
+    create_access_token,
+    decode_access_token,
+    verify_password,
+)
 
 
 def _request(
@@ -62,6 +67,35 @@ def test_duplicate_email_is_rejected(client: TestClient) -> None:
     }
     assert client.post("/v1/auth/register", json=payload).status_code == 201
     assert client.post("/v1/auth/register", json=payload).status_code == 409
+
+
+def test_unknown_email_still_checks_a_password_hash(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[str] = []
+
+    def _spy(plain_password: str, password_hash: str) -> bool:
+        seen.append(password_hash)
+        return verify_password(plain_password, password_hash)
+
+    monkeypatch.setattr("app.routers.auth.verify_password", _spy)
+    response = client.post(
+        "/v1/auth/login",
+        json={"email": "missing@goldqueen.dev", "password": "NotThePassword1!"},
+    )
+    assert response.status_code == 401
+    assert seen == [UNKNOWN_EMAIL_BCRYPT_HASH]
+
+
+def test_unknown_email_rejects_a_password_that_matches_the_dummy_hash(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/v1/auth/login",
+        json={"email": "missing@goldqueen.dev", "password": "StrongPass123!"},
+    )
+    assert response.status_code == 401
+    assert response.json()["code"] == "unauthenticated"
 
 
 def test_login_with_wrong_password_fails(client: TestClient) -> None:
@@ -134,7 +168,9 @@ def test_protected_route_requires_token(client: TestClient) -> None:
 def test_me_returns_current_user(auth_client: TestClient) -> None:
     response = auth_client.get("/v1/auth/me")
     assert response.status_code == 200
-    assert response.json()["email"] == "knight@goldqueen.dev"
+    body = response.json()
+    assert body["email"] == "knight@goldqueen.dev"
+    assert body["created_at"].endswith("Z") or body["created_at"][-6] in "+-"
 
 
 def test_access_token_round_trip() -> None:

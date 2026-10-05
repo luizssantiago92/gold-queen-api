@@ -3,14 +3,43 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, TypeDecorator, UniqueConstraint
+from sqlalchemy.engine import Dialect
 from sqlmodel import Field, SQLModel
 
-# SQLModel 0.0.45 maps a plain datetime to TIMESTAMP WITH TIME ZONE.
-# The initial migration created TIMESTAMP WITHOUT TIME ZONE. Keep that
-# storage so this upgrade does not rewrite existing columns. Writers still
-# pass aware UTC values; SQLAlchemy stores the UTC clock time.
-_STORED_DATETIME = DateTime(timezone=False)
+
+class UtcDateTime(TypeDecorator[datetime]):
+    """Store timezone-aware UTC instants.
+
+    Naive values are interpreted as UTC. JSON responses then include an
+    offset. The Alembic migration converts existing ``timestamp without time
+    zone`` columns with ``AT TIME ZONE 'UTC'``.
+    """
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_bind_param(
+        self, value: datetime | None, dialect: Dialect
+    ) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
+
+    def process_result_value(
+        self, value: datetime | str | None, dialect: Dialect
+    ) -> datetime | None:
+        if value is None:
+            return None
+        parsed = datetime.fromisoformat(value) if isinstance(value, str) else value
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
+
+
+_STORED_DATETIME = UtcDateTime()
 
 
 def _utcnow() -> datetime:
@@ -99,6 +128,9 @@ class ChatUsage(SQLModel, table=True):
     """Daily token-bucket counter that survives process restarts."""
 
     __tablename__ = "chat_usage"
+    __table_args__ = (
+        UniqueConstraint("user_id", "usage_date", name="uq_chat_usage_user_date"),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id", index=True)
@@ -116,6 +148,14 @@ class DemoChatUsage(SQLModel, table=True):
     """
 
     __tablename__ = "demo_chat_usage"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "subject_key",
+            "usage_date",
+            name="uq_demo_chat_usage_subject_date",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id", index=True)

@@ -3,10 +3,91 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
+from app.core.ai_guardrails import QueenTips
 from app.core.config import get_settings
+from app.models.entities import ChatCache
 from app.services.ai import AIEngine
+
+
+def test_queen_tips_follow_accept_language_when_locale_is_omitted(
+    auth_client: TestClient,
+) -> None:
+    portuguese = auth_client.get(
+        "/v1/advisor/queen-tips", headers={"Accept-Language": "pt-BR,en;q=0.8"}
+    )
+    assert portuguese.status_code == 200
+    assert "pergaminhos" in portuguese.json()["critical_expense"]
+
+    explicit = auth_client.get(
+        "/v1/advisor/queen-tips",
+        params={"locale": "en"},
+        headers={"Accept-Language": "pt-BR"},
+    )
+    assert explicit.status_code == 200
+    assert "treasury scrolls" in explicit.json()["critical_expense"]
+
+    default = auth_client.get("/v1/advisor/queen-tips")
+    assert "treasury scrolls" in default.json()["critical_expense"]
+
+
+def test_tips_cache_round_trips_json_including_the_legacy_separator(
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def guarded(
+        self: AIEngine, summary: str, locale: str = "en"
+    ) -> tuple[QueenTips, bool]:
+        return (
+            QueenTips(
+                critical_expense="alpha\n||\nbeta",
+                management_status="steady",
+                smart_guidance="save a tenth",
+            ),
+            True,
+        )
+
+    monkeypatch.setattr(AIEngine, "queen_tips", guarded)
+    first = auth_client.get("/v1/advisor/queen-tips")
+    second = auth_client.get("/v1/advisor/queen-tips")
+    assert first.status_code == 200
+    assert first.json()["from_cache"] is False
+    assert first.json()["critical_expense"] == "alpha\n||\nbeta"
+    assert second.json()["from_cache"] is True
+    assert second.json()["critical_expense"] == "alpha\n||\nbeta"
+
+
+def test_legacy_tips_cache_is_a_miss_and_does_not_crash(
+    auth_client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def guarded(
+        self: AIEngine, summary: str, locale: str = "en"
+    ) -> tuple[QueenTips, bool]:
+        return (
+            QueenTips(
+                critical_expense="fresh",
+                management_status="steady",
+                smart_guidance="save",
+            ),
+            True,
+        )
+
+    monkeypatch.setattr(AIEngine, "queen_tips", guarded)
+    assert auth_client.get("/v1/advisor/queen-tips").status_code == 200
+    cached = session.exec(select(ChatCache)).one()
+    cached.answer = "not-json\n||\nbroken"
+    session.add(cached)
+    session.commit()
+    session.expire_all()
+
+    missed = auth_client.get("/v1/advisor/queen-tips")
+    assert missed.status_code == 200
+    assert missed.json()["from_cache"] is False
+    assert missed.json()["critical_expense"] == "fresh"
+
+    hit = auth_client.get("/v1/advisor/queen-tips")
+    assert hit.json()["from_cache"] is True
+    assert hit.json()["critical_expense"] == "fresh"
 
 
 def test_queen_tips_returns_three_sections(auth_client: TestClient) -> None:

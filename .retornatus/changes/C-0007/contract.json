@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0007",
+  "version": 1,
+  "what": "Honor Accept-Language for queen tips when the locale query is omitted. Store the tips cache as JSON and treat a legacy row as a miss. Paginate dashboard transactions with SQL offset, limit, and count. Refresh demo dates on login instead of on dashboard reads. Add a unique user-and-date constraint on chat usage after deduping rows, and consume quota with an atomic upsert on Postgres and SQLite. Check a dummy bcrypt hash when a login email is unknown. Send the Gemini key in the x-goog-api-key header. Retry HTTP 429 with bounded backoff that honors Retry-After. Store timestamps as timezone-aware UTC so JSON includes an offset. Add a monochrome queen icon, a Swagger screenshot, and a one-minute trial to the README, and list the fixes under Unreleased.",
+  "constraints": [],
+  "done_criteria": [
+    "Queen tips follow Accept-Language when the locale query is omitted and follow the query when it is set.",
+    "A tips cache row stored as JSON round-trips, and an unparsable legacy row is a cache miss.",
+    "Transaction pages apply SQL offset and limit and report the full count.",
+    "Demo dates move on login and a dashboard read does not move them.",
+    "Concurrent quota consumption stops at the daily limit and leaves one usage row.",
+    "An unknown login email still runs a password hash check.",
+    "Gemini requests send the key in a header and omit it from the query string.",
+    "A 429 response is retried and the wait follows Retry-After up to a cap.",
+    "Serialized timestamps include a timezone offset.",
+    "The changelog Unreleased section lists these fixes and the version field stays 1.0.0.",
+    "The file \"README.md\" shows the monochrome queen mark, a Swagger screenshot, and a one-minute trial.",
+    "A review note covers the migration that dedupes quota rows and stores timestamps in UTC."
+  ],
+  "active": true,
+  "activated_at": "2026-10-05T03:00:26.797259Z"
+}

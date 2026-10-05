@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
+
 import httpx
 
 from app.providers.base import Completion, ProviderError
@@ -20,6 +23,27 @@ def _messages_to_gemini(
         contents.append({"role": gemini_role, "parts": [{"text": text}]})
     system_instruction = "\n\n".join(system_parts) if system_parts else None
     return system_instruction, contents
+
+
+def _retry_after_seconds(headers: httpx.Headers) -> float | None:
+    """Return the Retry-After delay in seconds, when the header is present."""
+    raw = headers.get("retry-after")
+    if raw is None or not raw.strip():
+        return None
+    text = raw.strip()
+    try:
+        seconds = float(text)
+    except ValueError:
+        try:
+            parsed = parsedate_to_datetime(text)
+        except (TypeError, ValueError, IndexError):
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        seconds = (parsed - datetime.now(UTC)).total_seconds()
+    if seconds < 0:
+        return 0.0
+    return seconds
 
 
 def _extract_text(data: dict) -> str:
@@ -80,11 +104,11 @@ class GeminiProvider:
             return False
 
     def _request(self, method: str, url: str, json: dict | None = None) -> dict:
-        params = {"key": self._api_key}
+        headers = {"x-goog-api-key": self._api_key}
         client = self._client or httpx.Client(timeout=self._timeout)
         owns_client = self._client is None
         try:
-            response = client.request(method, url, json=json, params=params)
+            response = client.request(method, url, json=json, headers=headers)
         except httpx.TimeoutException as exc:
             raise ProviderError("gemini timeout", timed_out=True) from exc
         except httpx.HTTPError as exc:
@@ -92,9 +116,11 @@ class GeminiProvider:
         finally:
             if owns_client:
                 client.close()
-        if response.status_code >= 500:
+        if response.status_code == 429 or response.status_code >= 500:
             raise ProviderError(
-                "gemini upstream error", status_code=response.status_code
+                "gemini upstream error",
+                status_code=response.status_code,
+                retry_after_seconds=_retry_after_seconds(response.headers),
             )
         if response.status_code >= 400:
             raise ProviderError("gemini client error", status_code=response.status_code)

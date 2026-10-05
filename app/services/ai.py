@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = 1.5
+_MAX_RETRY_DELAY_SECONDS = 8.0
 
 # Gemini returns 503 when the flash tier is briefly saturated and 429 when the
 # free quota is throttled; both clear on their own, unlike a bad key or model.
@@ -79,6 +80,16 @@ def _is_transient(error: Exception) -> bool:
     return any(marker in message for marker in _TRANSIENT_MARKERS)
 
 
+def _retry_delay_seconds(error: Exception, attempt: int) -> float:
+    """Bounded wait. A Retry-After hint replaces the default backoff."""
+    delay = _RETRY_BACKOFF_SECONDS * (attempt + 1)
+    if isinstance(error, ProviderError) and error.retry_after_seconds is not None:
+        delay = error.retry_after_seconds
+    if delay < 0:
+        return 0.0
+    return min(delay, _MAX_RETRY_DELAY_SECONDS)
+
+
 def _queen_persona(locale: Locale = DEFAULT_LOCALE, *, chat: bool = False) -> str:
     scope = f" {_CHAT_PERSONA_SCOPE}" if chat else ""
     return f"{_PERSONA_BASE}{scope} {_PERSONA_LANGUAGE[locale]}"
@@ -125,7 +136,7 @@ class AIEngine:
                     _MAX_ATTEMPTS,
                     exc,
                 )
-                time.sleep(_RETRY_BACKOFF_SECONDS * (attempt + 1))
+                time.sleep(_retry_delay_seconds(exc, attempt))
 
         if last_error is not None:
             raise last_error

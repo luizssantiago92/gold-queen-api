@@ -3,6 +3,7 @@
 from datetime import date
 from decimal import Decimal
 
+from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from app.core.config import get_settings
@@ -45,12 +46,11 @@ def user_accounts(
     return [(account, connection) for account, connection in rows]
 
 
-def user_transaction_rows(
-    session: Session,
+def _transaction_statement(
     user_id: int,
     start: date | None = None,
     end: date | None = None,
-) -> list[tuple[Transaction, Account, BankConnection]]:
+):
     statement = (
         select(Transaction, Account, BankConnection)
         .join(Account, col(Transaction.account_id) == col(Account.id))
@@ -61,8 +61,52 @@ def user_transaction_rows(
         statement = statement.where(Transaction.transaction_date >= start)
     if end is not None:
         statement = statement.where(Transaction.transaction_date < end)
+    return statement
 
-    ordered = statement.order_by(col(Transaction.transaction_date).desc())
+
+def user_transaction_rows(
+    session: Session,
+    user_id: int,
+    start: date | None = None,
+    end: date | None = None,
+) -> list[tuple[Transaction, Account, BankConnection]]:
+    ordered = _transaction_statement(user_id, start, end).order_by(
+        col(Transaction.transaction_date).desc()
+    )
+    rows = session.exec(ordered).all()
+    return [
+        (transaction, account, connection) for transaction, account, connection in rows
+    ]
+
+
+def count_user_transactions(
+    session: Session,
+    user_id: int,
+    start: date | None = None,
+    end: date | None = None,
+) -> int:
+    """Return how many transactions match, without loading the rows."""
+    counted = select(func.count()).select_from(
+        _transaction_statement(user_id, start, end).subquery()
+    )
+    return int(session.exec(counted).one())
+
+
+def page_user_transaction_rows(
+    session: Session,
+    user_id: int,
+    start: date | None,
+    end: date | None,
+    offset: int,
+    limit: int,
+) -> list[tuple[Transaction, Account, BankConnection]]:
+    """Return one page of transactions, newest first."""
+    ordered = (
+        _transaction_statement(user_id, start, end)
+        .order_by(col(Transaction.transaction_date).desc())
+        .offset(offset)
+        .limit(limit)
+    )
     rows = session.exec(ordered).all()
     return [
         (transaction, account, connection) for transaction, account, connection in rows

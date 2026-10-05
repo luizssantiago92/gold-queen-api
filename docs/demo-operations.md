@@ -14,7 +14,7 @@ The production web app (https://gold-queen-web.vercel.app) ships with:
 
 ## Read-only account
 
-`queen@goldqueen.dev` and `squire@goldqueen.dev` share published credentials. `POST /v1/connections/connect`, `POST /v1/connections/sync`, and `DELETE /v1/connections/{id}` return `403` with code `demo_read_only`. Dashboard reads still refresh transaction dates.
+`queen@goldqueen.dev` and `squire@goldqueen.dev` share published credentials. `POST /v1/connections/connect`, `POST /v1/connections/sync`, and `DELETE /v1/connections/{id}` return `403` with code `demo_read_only`. A successful demo login slides stale transaction dates forward. Dashboard reads do not write.
 
 Because the seed script below calls connect and sync as that user, it cannot repopulate a deploy where the guard is enabled. Bank data has to already be in place.
 

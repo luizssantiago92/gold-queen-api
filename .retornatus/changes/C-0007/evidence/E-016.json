@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "C-0007/E-016",
+  "type": "repository_observation",
+  "subject": "ship rollback",
+  "source": "Rollback of the application is reverting this revision and running alembic downgrade a630d3c39926. That converts the six timestamptz columns back to timestamp without time zone as UTC clock time and drops uq_chat_usage_user_date and uq_demo_chat_usage_subject_date. Merged quota rows stay merged, and demo_chat_usage is not dropped. No Render environment variable changes. Do not reset the Supabase database.",
+  "producer": "agent",
+  "observed_at": "2026-10-05T03:31:34.571283Z",
+  "subject_state": "commit:dca4233388bec8f44b61841cff2dc8025b9c2959",
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": []
+}

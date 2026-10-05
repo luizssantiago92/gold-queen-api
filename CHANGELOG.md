@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Queen's Tips honor `Accept-Language` when the `locale` query is omitted. An explicit `locale` still wins.
+- The tips cache is stored as JSON. A legacy row that cannot be parsed is a cache miss.
+- `GET /v1/dashboard/transactions` pages with SQL `OFFSET`/`LIMIT` and `COUNT`.
+- Demo transaction dates refresh on login. Dashboard reads no longer write.
+- Daily quota consumption is one atomic upsert. `chat_usage` has a unique `(user_id, usage_date)` constraint, and the same idea covers per-visitor demo rows.
+- Login checks a dummy bcrypt hash when the email is unknown.
+- The Gemini API key is sent in the `x-goog-api-key` header.
+- HTTP 429 from the model provider is retried, honoring `Retry-After` up to 8 seconds.
+- Timestamps are stored as timezone-aware UTC, so JSON includes an offset.
+
+### Security
+
+- Unknown emails no longer skip the password check.
+
 ## [1.0.0] - 2026-10-03
 
 ### Added
