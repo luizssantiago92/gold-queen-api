@@ -69,3 +69,7 @@ Agents and humans express intent. Retornatus owns structure.
 
 - Sufficient: **yes**
 - Rationale: Demand, WHAT, and DONE are sufficiently clear; repo/kickoff signals incorporated; no material requirements ambiguity detected
+
+## Reopened Situation
+
+Reword the changelog criterion so Assurance does not treat the word package as a build claim.
