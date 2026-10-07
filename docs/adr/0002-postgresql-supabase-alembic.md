@@ -9,9 +9,9 @@ Treasury rows, the chat cache, and the daily quota have to survive a process res
 
 ## Decision
 
-Tables are SQLModel classes in `app/models/entities.py`. Alembic is the only PostgreSQL schema source. Head is `c7a1b5e0d942`. `init_db` calls `create_all` only when the URL backend is SQLite. A fresh Postgres, including `docker-compose.yml`, is built with `alembic upgrade head`. Render starts uvicorn and does not run migrations.
+Tables are SQLModel classes in `app/models/entities.py`. Alembic is the only PostgreSQL schema source. Head is `d4e7a2b81c05`. `init_db` calls `create_all` only when the URL backend is SQLite. A fresh Postgres, including `docker-compose.yml`, is built with `alembic upgrade head`. Render starts uvicorn and does not run migrations.
 
-The production database was created by the Supabase migrations `initial_schema` and `enable_row_level_security`, not by Alembic. `alembic upgrade head` must not be run there. After the live schema is confirmed to match head, `alembic stamp head` records `alembic_version` without changing tables. Later changes are new revisions applied with `alembic upgrade head` before or with the deploy.
+The production database was created by the Supabase migrations `initial_schema` and `enable_row_level_security`, not by Alembic. `alembic upgrade head` must not be the first command on a database that has no `alembic_version` row: that tries to create tables that already exist. After the live schema is confirmed to match `c7a1b5e0d942`, `alembic stamp c7a1b5e0d942` records that revision without changing tables. Later revisions, including `d4e7a2b81c05` (transaction dedupe and `uq_transactions_account_pluggy_id`), are applied with `alembic upgrade head`. Render does not run that command.
 
 `DATABASE_URL` uses the SQLAlchemy driver suffix `postgresql+psycopg2` and the session pooler host. The direct host publishes only an IPv6 address.
 

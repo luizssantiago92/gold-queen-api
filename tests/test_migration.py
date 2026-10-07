@@ -135,3 +135,121 @@ def test_upgrade_dedupes_usage_rows_and_adds_the_constraint(
             text("SELECT request_count FROM chat_usage")
         ).fetchall()
     assert again == [(5,)]
+
+
+def test_upgrade_dedupes_transactions_and_adds_the_pluggy_constraint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = tmp_path / "transactions.db"
+    monkeypatch.setattr(get_settings(), "database_url", f"sqlite:///{database}")
+    monkeypatch.setattr("app.core.database._engine", None)
+    config = Config("alembic.ini")
+    with _LoggingSnapshot():
+        command.upgrade(config, "c7a1b5e0d942")
+
+    engine = create_engine(f"sqlite:///{database}")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO users "
+                "(id, email, display_name, password_hash, created_at) "
+                "VALUES (1, 'queen@goldqueen.dev', 'Queen', 'x', "
+                "'2026-08-28 00:00:00')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO bank_connections "
+                "(id, user_id, pluggy_item_id, institution_name, status, created_at) "
+                "VALUES (1, 1, 'item-1', 'Pluggy Bank', 'UPDATED', "
+                "'2026-08-28 00:00:00')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO accounts "
+                "(id, connection_id, pluggy_account_id, name, account_type, balance, "
+                "currency, updated_at) VALUES "
+                "(1, 1, 'acc-1', 'Checking', 'BANK', 100, 'BRL', "
+                "'2026-08-28 00:00:00'), "
+                "(2, 1, 'acc-2', 'Savings', 'BANK', 50, 'BRL', '2026-08-28 00:00:00')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO transactions "
+                "(id, account_id, pluggy_transaction_id, description, amount, "
+                "transaction_date, category, is_guarded, created_at) VALUES "
+                "(1, 1, 'tx-salary', 'SALARIO EMPRESA XYZ LTDA', 8500, "
+                "'2026-08-01', 'Income', 1, '2026-08-28 00:00:00'), "
+                "(2, 1, 'tx-salary', 'SALARIO EMPRESA XYZ LTDA', 8500, "
+                "'2026-08-01', 'Income', 1, '2026-08-28 00:00:01'), "
+                "(3, 1, 'tx-salary-b', 'SALARIO EMPRESA XYZ LTDA', 8500.00, "
+                "'2026-08-01', 'Income', 0, '2026-08-28 00:00:02'), "
+                "(4, 1, 'tx-netflix', 'NETFLIX.COM', -39.90, "
+                "'2026-08-28', 'Entertainment', 1, '2026-08-28 00:00:03'), "
+                "(5, 1, 'tx-netflix-b', 'NETFLIX.COM', -39.90, "
+                "'2026-08-28', 'Entertainment', 1, '2026-08-28 00:00:04'), "
+                "(6, 1, 'tx-spotify', 'SPOTIFY AB', -21.90, "
+                "'2026-08-15', 'Entertainment', 1, '2026-08-28 00:00:05'), "
+                "(7, 1, 'tx-fit', 'SMART FIT ACADEMIA', -99.90, "
+                "'2026-08-10', 'Health', 1, '2026-08-28 00:00:06'), "
+                "(8, 1, 'tx-fit', 'SMART FIT ACADEMIA', -10.00, "
+                "'2026-08-11', 'Health', 1, '2026-08-28 00:00:07'), "
+                "(9, 2, 'tx-salary', 'SALARIO EMPRESA XYZ LTDA', 8500, "
+                "'2026-08-01', 'Income', 1, '2026-08-28 00:00:08'), "
+                "(10, 1, 'tx-netflix-big', 'NETFLIX.COM', -55.00, "
+                "'2026-08-28', 'Entertainment', 1, '2026-08-28 00:00:09')"
+            )
+        )
+
+    with _LoggingSnapshot():
+        command.upgrade(config, "head")
+
+    with engine.connect() as connection:
+        kept = connection.execute(
+            text("SELECT id FROM transactions ORDER BY id")
+        ).fetchall()
+    assert [row[0] for row in kept] == [1, 4, 6, 7, 9, 10]
+
+    with engine.begin() as connection, pytest.raises(IntegrityError):
+        connection.execute(
+            text(
+                "INSERT INTO transactions "
+                "(account_id, pluggy_transaction_id, description, amount, "
+                "transaction_date, category, is_guarded, created_at) VALUES "
+                "(1, 'tx-salary', 'SALARIO EMPRESA XYZ LTDA', 8500, "
+                "'2026-08-01', 'Income', 0, '2026-08-28 00:00:10')"
+            )
+        )
+
+    with _LoggingSnapshot():
+        command.downgrade(config, "c7a1b5e0d942")
+
+    with engine.begin() as connection:
+        still_kept = connection.execute(
+            text("SELECT id FROM transactions ORDER BY id")
+        ).fetchall()
+        connection.execute(
+            text(
+                "INSERT INTO transactions "
+                "(account_id, pluggy_transaction_id, description, amount, "
+                "transaction_date, category, is_guarded, created_at) VALUES "
+                "(1, 'tx-salary', 'SALARIO EMPRESA XYZ LTDA', 9000, "
+                "'2026-08-02', 'Income', 0, '2026-08-28 00:00:11')"
+            )
+        )
+    assert [row[0] for row in still_kept] == [1, 4, 6, 7, 9, 10]
+
+    with _LoggingSnapshot():
+        command.upgrade(config, "head")
+
+    with engine.connect() as connection:
+        again = connection.execute(
+            text(
+                "SELECT id, amount FROM transactions "
+                "WHERE account_id = 1 AND pluggy_transaction_id = 'tx-salary'"
+            )
+        ).fetchall()
+    assert len(again) == 1
+    assert again[0][0] == 1

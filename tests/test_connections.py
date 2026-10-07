@@ -6,12 +6,22 @@ import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date
+from decimal import Decimal
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session, select
 
 from app.core.config import get_settings
+from app.models.entities import (
+    Account,
+    BankConnection,
+    Transaction,
+    User,
+    require_id,
+)
 from app.routers.connections import create_connect_token, sync_connection
 from app.services import sync as sync_service
 from app.services.ai import AIEngine
@@ -343,3 +353,173 @@ def test_sync_does_not_block_the_event_loop(
     assert elapsed < 1
     assert root.status_code == 307
     assert sync_response.status_code == 200
+
+
+ITEM_DUPES = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+
+
+def _pluggy_page(
+    results: list[dict[str, object]], next_page: str | None
+) -> httpx.Response:
+    return httpx.Response(200, json={"results": results, "next": next_page})
+
+
+def test_sync_collapses_a_repeated_pluggy_id_and_upserts_on_the_next_fetch(
+    auth_client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user_id = str(auth_client.get("/v1/auth/me").json()["id"])
+    today = date.today().isoformat()
+    pages = {"count": 0}
+    salary = {
+        "id": "tx-salary",
+        "description": "SALARIO EMPRESA XYZ LTDA",
+        "amount": 8500,
+        "date": today,
+    }
+    netflix = {
+        "id": "tx-netflix",
+        "description": "NETFLIX.COM",
+        "amount": -39.9,
+        "date": today,
+    }
+    spotify = {
+        "id": "tx-spotify",
+        "description": "SPOTIFY AB",
+        "amount": -21.9,
+        "date": today,
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth":
+            return httpx.Response(200, json={"apiKey": "key"})
+        if request.url.path.startswith("/items/"):
+            return httpx.Response(
+                200,
+                json={
+                    "id": ITEM_DUPES,
+                    "status": "UPDATED",
+                    "clientUserId": user_id,
+                    "connector": {"name": "Pluggy Bank"},
+                },
+            )
+        if request.url.path == "/accounts":
+            return httpx.Response(
+                200,
+                json={
+                    "results": [
+                        {
+                            "id": "acc-dupes",
+                            "name": "Checking",
+                            "balance": 1000,
+                            "currencyCode": "BRL",
+                            "type": "BANK",
+                        }
+                    ]
+                },
+            )
+        pages["count"] += 1
+        if pages["count"] == 1:
+            return _pluggy_page(
+                [salary, salary, netflix, netflix],
+                "https://api.pluggy.ai/v2/transactions?accountId=acc-dupes&page=2",
+            )
+        return _pluggy_page([salary, spotify], None)
+
+    _enable_pluggy(monkeypatch, handler)
+    first = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_DUPES})
+    assert first.status_code == 200
+    assert first.json()["transactions_synced"] == 3
+
+    overview = auth_client.get("/v1/dashboard/overview").json()
+    assert Decimal(str(overview["month_income"])) == Decimal("8500.00")
+    assert Decimal(str(overview["month_expenses"])) == Decimal("61.80")
+    assert len(session.exec(select(Transaction)).all()) == 3
+
+    pages["count"] = 0
+    salary["amount"] = 9000
+    salary["description"] = "FOLHA EMPRESA XYZ LTDA"
+    shifted = date.today()
+    if shifted.day > 1:
+        shifted = shifted.replace(day=shifted.day - 1)
+    salary["date"] = shifted.isoformat()
+    second = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_DUPES})
+    assert second.status_code == 200
+    assert second.json()["transactions_synced"] == 0
+    assert second.json()["transactions_categorized"] == 0
+
+    rows = session.exec(
+        select(Transaction).where(Transaction.pluggy_transaction_id == "tx-salary")
+    ).all()
+    assert len(rows) == 1
+    assert rows[0].amount == Decimal("9000.00")
+    assert rows[0].description == "FOLHA EMPRESA XYZ LTDA"
+    assert rows[0].transaction_date == shifted
+    assert rows[0].category == "Income"
+    refreshed = auth_client.get("/v1/dashboard/overview").json()
+    assert Decimal(str(refreshed["month_income"])) == Decimal("9000.00")
+
+
+def test_persist_new_transaction_updates_the_row_when_the_key_exists(
+    session: Session,
+) -> None:
+    user = User(
+        email="sync-race@goldqueen.dev",
+        display_name="Sync",
+        password_hash="x",
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    connection = BankConnection(
+        user_id=require_id(user.id),
+        pluggy_item_id="item-race",
+        institution_name="Pluggy Bank",
+    )
+    session.add(connection)
+    session.commit()
+    session.refresh(connection)
+    account = Account(
+        connection_id=require_id(connection.id),
+        pluggy_account_id="acc-race",
+        name="Checking",
+        balance=Decimal("0"),
+    )
+    session.add(account)
+    session.commit()
+    session.refresh(account)
+    account_id = require_id(account.id)
+    original = Transaction(
+        account_id=account_id,
+        pluggy_transaction_id="tx-salary",
+        description="SALARIO EMPRESA XYZ LTDA",
+        amount=Decimal("8500.00"),
+        transaction_date=date(2026, 8, 1),
+        category="Income",
+        is_guarded=True,
+    )
+    session.add(original)
+    session.commit()
+    session.refresh(original)
+
+    sync_service._persist_new_transaction(
+        session,
+        Transaction(
+            account_id=account_id,
+            pluggy_transaction_id="tx-salary",
+            description="FOLHA EMPRESA XYZ LTDA",
+            amount=Decimal("9000.00"),
+            transaction_date=date(2026, 8, 2),
+            category="Uncategorized",
+            is_guarded=False,
+        ),
+    )
+    session.commit()
+
+    rows = session.exec(select(Transaction)).all()
+    assert len(rows) == 1
+    assert rows[0].id == original.id
+    assert rows[0].amount == Decimal("9000.00")
+    assert rows[0].description == "FOLHA EMPRESA XYZ LTDA"
+    assert rows[0].transaction_date == date(2026, 8, 2)
+    assert rows[0].category == "Income"
+    assert rows[0].is_guarded is True

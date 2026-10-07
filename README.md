@@ -78,7 +78,7 @@ Docs: http://127.0.0.1:8000/docs
 
 On Windows, activate the venv with `.venv\Scripts\activate`.
 
-Copying `.env.example` sets `DATABASE_URL` to the Postgres in `docker-compose.yml`. Run `alembic upgrade head` before `python -m app.seed` on that database. Production Supabase was created outside Alembic; the one-time step there is `alembic stamp head`, described in [docs/deployment.md](docs/deployment.md). `python -m app.seed` creates users only. Linking a sandbox bank is described in [docs/demo-operations.md](docs/demo-operations.md). That script calls connect and sync as the demo user, so it cannot refresh a deploy where the read-only guard is on.
+Copying `.env.example` sets `DATABASE_URL` to the Postgres in `docker-compose.yml`. Run `alembic upgrade head` before `python -m app.seed` on that database. Production Supabase was created outside Alembic. If `alembic_version` is missing, stamp `c7a1b5e0d942` once, then run `alembic upgrade head`. Render does not run Alembic. The steps are in [docs/deployment.md](docs/deployment.md). `python -m app.seed` creates users only. Linking a sandbox bank is described in [docs/demo-operations.md](docs/demo-operations.md). That script calls connect and sync as the demo user, so it cannot refresh a deploy where the read-only guard is on.
 
 ## Try it in 1 minute
 

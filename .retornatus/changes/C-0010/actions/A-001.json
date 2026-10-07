@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "C-0010/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "Make sync idempotent: skip a repeated Pluggy transaction id inside one fetch, and upsert on (account_id, pluggy_transaction_id). Add an Alembic revision that deletes existing copies that share (account_id, pluggy_transaction_id) and copies that share (account_id, description, amount, transaction_date), keeping the oldest id in each group, then adds unique constraint uq_transactions_account_pluggy_id. Downgrade drops that constraint and does not restore deleted rows.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "A fetch that repeats one Pluggy transaction id stores a single row for that account.",
+    "A later sync of the same (account_id, pluggy_transaction_id) updates description, amount, and date in place and does not insert another row.",
+    "The migration deletes extra rows that share (account_id, pluggy_transaction_id), keeping the oldest id, and deletes extra rows that share (account_id, description, amount, transaction_date), keeping the oldest id.",
+    "The migration adds unique constraint uq_transactions_account_pluggy_id. Inserting the same (account_id, pluggy_transaction_id) again fails. Downgrade drops the constraint and does not restore deleted rows.",
+    "Tests cover the in-fetch skip, the upsert, and the migration upgrade and downgrade.",
+    "CHANGELOG Unreleased records the dedupe. docs/data-model.md, docs/deployment.md, and ADR 0002 name the new head and the constraint. The version in pyproject.toml stays 1.0.0.",
+    "A review note covers the migration. A ship rollback note says rollback is alembic downgrade c7a1b5e0d942, which drops the constraint and does not restore deleted rows, and that Render does not run Alembic so the owner runs alembic upgrade head once after merge."
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0010/T-001",
+      "description": "Skip repeated Pluggy ids in one fetch and upsert on (account_id, pluggy_transaction_id).",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/services/sync.py",
+        "app/models/entities.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0010/T-002",
+      "description": "Add an Alembic revision that deletes duplicate transactions and creates uq_transactions_account_pluggy_id.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "alembic/versions/d4e7a2b81c05_dedupe_transactions.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0010/T-003",
+      "description": "Cover in-fetch skip, upsert, and migration upgrade and downgrade with tests.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "tests/test_connections.py",
+        "tests/test_migration.py",
+        "tests/test_database.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0010/T-004",
+      "description": "Record the dedupe in the changelog and point the schema docs at the new head.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "CHANGELOG.md",
+        "docs/data-model.md",
+        "docs/deployment.md",
+        "docs/adr/0002-postgresql-supabase-alembic.md",
+        "README.md"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}
