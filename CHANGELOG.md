@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Bank sync skips a repeated Pluggy transaction id in one fetch and upserts on `(account_id, pluggy_transaction_id)`, so the same movement is not inserted twice. Alembic revision `d4e7a2b81c05` deletes stored copies that share a Pluggy id in one account, and copies that share account, description, amount, and date, keeping the oldest id, then adds `uq_transactions_account_pluggy_id`. Render does not run Alembic; apply the revision once with `alembic upgrade head`.
+- The chat scope guard casefolds the question and the keyword lists and strips accents with NFKD before matching, so `Quais foram minhas 3 maiores transações este mês?` stays on treasury topics. Off-topic questions are still refused.
 
 ### Security
 

@@ -69,7 +69,7 @@ Trace: `app/routers/advisor.py`, `app/services/ai.py`, `app/core/locale.py`, `te
 
 `POST /v1/chat/query` answers one question and returns `remaining_requests` and `daily_limit`.
 
-- The body is `question` (3–500 characters) and `locale` (`en` or `pt`, default `en`). An off-topic question gets a fixed refusal in that language and does not consume quota or call Gemini. A question is in scope when it matches the treasury and app vocabulary in `app/services/chat_scope.py`.
+- The body is `question` (3–500 characters) and `locale` (`en` or `pt`, default `en`). An off-topic question gets a fixed refusal in that language and does not consume quota or call Gemini. A question is in scope when it matches the treasury and app vocabulary in `app/services/chat_scope.py`. The comparison casefolds the question and the vocabulary and strips accents with NFKD, so `transações` matches `transac` and `mês` matches `mes`.
 - An in-scope question is normalized (lowercase, collapsed whitespace) and hashed. The same hash for the same user on the same `usage_date` is served from `chat_cache` and does not consume quota.
 - Otherwise the request consumes one unit of `CHAT_DAILY_LIMIT` (default 5) and then calls the model with the treasury summary and the Queen persona. The prompt asks for at most four sentences and tells the model to stay on treasury and app topics. The code does not truncate a longer answer.
 - A model failure is not cached. The consumed unit is refunded. A missing API key uses the rule fallback and is treated as a stable answer (it can be cached).

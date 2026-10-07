@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0011",
+  "version": 1,
+  "what": "Normalize the chat scope guard with unicodedata NFKD accent stripping and casefold on the user question and on the in-scope and out-of-scope keyword lists, then match. Accented, unaccented, and uppercase treasury questions in Portuguese and English stay in scope, including the two live questions. Genuinely off-topic questions stay refused.",
+  "constraints": [],
+  "done_criteria": [
+    "Quais foram minhas 3 maiores transações este mês? is in scope.",
+    "The unaccented form, the uppercase form, and Qual foi meu maior gasto? are in scope.",
+    "English questions about the user's own transactions, including the largest this month, are in scope.",
+    "A genuinely off-topic question, including an accented Portuguese one, stays out of scope.",
+    "Tests cover accented, unaccented, and uppercase variants in Portuguese and English.",
+    "The accent folding is documented in CHANGELOG Unreleased and the version in pyproject.toml stays 1.0.0."
+  ],
+  "active": true,
+  "activated_at": "2026-10-07T23:57:53.367778Z"
+}

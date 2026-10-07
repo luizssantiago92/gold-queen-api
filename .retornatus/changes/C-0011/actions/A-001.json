@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "C-0011/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "Normalize the chat scope guard with unicodedata NFKD accent stripping and casefold on the user question and on the in-scope and out-of-scope keyword lists, then match. Accented, unaccented, and uppercase treasury questions in Portuguese and English stay in scope, including the two live questions. Genuinely off-topic questions stay refused.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "Quais foram minhas 3 maiores transações este mês? is in scope.",
+    "The unaccented form, the uppercase form, and Qual foi meu maior gasto? are in scope.",
+    "English questions about the user's own transactions, including the largest this month, are in scope.",
+    "A genuinely off-topic question, including an accented Portuguese one, stays out of scope.",
+    "Tests cover accented, unaccented, and uppercase variants in Portuguese and English.",
+    "The accent folding is documented in CHANGELOG Unreleased and the version in pyproject.toml stays 1.0.0."
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0011/T-001",
+      "description": "Fold case and strip accents on the question and on both keyword lists before matching.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/services/chat_scope.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0011/T-002",
+      "description": "Cover accented, unaccented, uppercase, English, and off-topic questions with tests.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "tests/test_chat_scope.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0011/T-003",
+      "description": "Record the scope fix in the changelog.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "CHANGELOG.md",
+        "docs/requirements.md"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}
