@@ -1,0 +1,12 @@
+........................................................................ [ 40%]
+.............................s.......................................... [ 81%]
+................................                                         [100%]
+=============================== warnings summary ===============================
+tests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint
+tests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint
+tests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint
+tests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint
+  /workspace/.venv/lib/python3.12/site-packages/alembic/config.py:604: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.
+    util.warn_deprecated(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html

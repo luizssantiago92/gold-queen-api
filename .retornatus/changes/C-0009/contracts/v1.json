@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0009",
+  "version": 1,
+  "what": "Add English documentation that describes only behavior present in this repository: current functional and non-functional requirements, a Mermaid entity diagram of the real PostgreSQL schema with table notes, short MADR architecture decision records for the decisions already implemented, a root security policy, and links from the documentation index and the main README. Leave application code, migrations, and the package version unchanged.",
+  "constraints": [],
+  "done_criteria": [
+    "docs/requirements.md lists current functional requirements as RF-xx and non-functional requirements as RNF-xx covering security, performance and cold start, availability, privacy and LGPD-minded data handling, observability, and cost, each traceable to code, an endpoint, or a test where possible, and it states that docs/history/PRD.md is historical.",
+    "docs/data-model.md contains a Mermaid erDiagram derived from the SQLAlchemy models and Alembic migrations, plus a short description of each table covering keys, relationships, notable constraints, and the row-level security note.",
+    "docs/adr/ contains short MADR-style records with context, decision, consequences, and alternatives for FastAPI, PostgreSQL on Supabase plus Alembic, Render hosting and its cold start, Vercel for the frontend, JWT plus bcrypt plus the login rate limit, Gemini categorization with guardrails, rule fallback, and daily quota, the read-only demo account, and Retornatus governance, plus docs/adr/README.md as an index.",
+    "SECURITY.md at the repository root states supported versions, how to report a vulnerability privately, and a summary of security controls that the code actually implements.",
+    "docs/README.md and the documentation section of README.md link to the requirements, data model, ADR index, and SECURITY.md.",
+    "The diff does not change application behavior: app/, tests/, alembic/, and the version in pyproject.toml stay as they are."
+  ],
+  "active": true,
+  "activated_at": "2026-10-07T01:25:18.193006Z"
+}

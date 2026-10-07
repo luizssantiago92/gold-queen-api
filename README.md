@@ -124,13 +124,23 @@ Do not send `PLUGGY_CLIENT_SECRET` or `GEMINI_API_KEY` to the browser.
 app/            routers, services, SQLModel tables, config, auth
 alembic/        migrations
 tests/          pytest
-docs/           architecture, frontend contracts, deploy, demo ops
+docs/           requirements, data model, ADRs, architecture, deploy
 docs/history/   original product brief
 .github/        CI, CodeQL, Dependabot, Supabase keep-alive
 .retornatus/    change contracts and evidence
 ```
 
-Guides: [docs/README.md](docs/README.md).
+## Documentation
+
+| Document | What it covers |
+| --- | --- |
+| [docs/requirements.md](docs/requirements.md) | Current functional and non-functional requirements |
+| [docs/data-model.md](docs/data-model.md) | PostgreSQL schema and Mermaid ER diagram |
+| [docs/adr/README.md](docs/adr/README.md) | Architecture decision records |
+| [SECURITY.md](SECURITY.md) | Supported versions, private reports, security controls |
+| [docs/README.md](docs/README.md) | Index of the other guides |
+
+The original brief is [docs/history/PRD.md](docs/history/PRD.md). It is historical. Current behavior is the requirements document.
 
 ## Tests
 

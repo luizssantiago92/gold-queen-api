@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0009/E-009",
+  "type": "repository_observation",
+  "subject": "Document supported versions, the private vulnerability report path, and the cont",
+  "source": "SECURITY.md documents supported 1.0.x versions, GitHub private vulnerability reporting, and the controls implemented in the API.",
+  "producer": "agent",
+  "observed_at": "2026-10-07T01:31:33.310677Z",
+  "subject_state": null,
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0009/claim-done-4",
+      "note": null
+    }
+  ]
+}

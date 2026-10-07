@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Current requirements, a PostgreSQL entity diagram, architecture decision records, and a security policy. The original brief stays in `docs/history/`.
+
 ### Changed
 
 - Postgres schema comes only from Alembic. Startup `create_all` runs for SQLite (local quick-start and tests) and does not run against Postgres. An existing Supabase database is aligned once with `alembic stamp head`; a fresh database uses `alembic upgrade head`.

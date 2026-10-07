@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "C-0009/E-001",
+  "type": "test_result",
+  "subject": "/requirements.md",
+  "source": "pytest",
+  "producer": "retornatus",
+  "observed_at": "2026-10-07T01:31:16.332720Z",
+  "subject_state": "commit:806143896fb54972e055028f8652deda04080466",
+  "provenance": "executed",
+  "command": [
+    "uv",
+    "run",
+    "pytest",
+    "-q"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-10-07T01:30:33.263992Z",
+  "ended_at": "2026-10-07T01:31:09.591351Z",
+  "duration_ms": 36327,
+  "output_sha256": "6e75a3c0fce0cf75f275a065408c95f7f5559c7b7ea90c4a715ee72c5414b2d2",
+  "output_tail": "........................................................................ [ 40%]\n.............................s.......................................... [ 81%]\n................................                                         [100%]\n=============================== warnings summary ===============================\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\n  /workspace/.venv/lib/python3.12/site-packages/alembic/config.py:604: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.\n    util.warn_deprecated(\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n",
+  "output_artifact": ".retornatus/changes/C-0009/evidence/E-001.output.txt",
+  "git_commit": "806143896fb54972e055028f8652deda04080466",
+  "worktree_dirty": false,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0009/claim-done-1",
+      "note": null
+    }
+  ]
+}

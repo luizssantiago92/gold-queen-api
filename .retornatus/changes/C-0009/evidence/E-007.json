@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0009/E-007",
+  "type": "repository_observation",
+  "subject": "docs/data-model.md",
+  "source": "docs/data-model.md has a Mermaid erDiagram of the seven SQLModel tables and notes keys, constraints, and RLS.",
+  "producer": "agent",
+  "observed_at": "2026-10-07T01:31:32.804511Z",
+  "subject_state": null,
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0009/claim-done-2",
+      "note": null
+    }
+  ]
+}

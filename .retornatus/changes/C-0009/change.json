@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0009",
+  "title": "Portfolio documentation: requirements, data model, ADRs, and security policy",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Open one docs-only pull request that adds portfolio-grade documentation grounded strictly in the current code: docs/requirements.md (RF and RNF, traceable to code, endpoints, or tests; historical PRD stays in docs/history/), docs/data-model.md (Mermaid erDiagram from SQLAlchemy models and Alembic), docs/adr/ MADR records for the real decisions plus an index, SECURITY.md at the repo root, and links from docs/README.md and the main README docs section. CI stays green. Govern the work with a Retornatus Change that reaches SATISFIED. Do not change gold-queen-web.",
+    "kind": "OTHER"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 2,
+  "relations": [],
+  "created_at": "2026-10-07T01:25:18.184105Z"
+}
