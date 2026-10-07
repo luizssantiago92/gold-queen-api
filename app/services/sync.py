@@ -7,13 +7,14 @@ from typing import Any
 from uuid import UUID
 
 import anyio
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, delete, select
 
 from app.core.config import get_settings
 from app.core.exceptions import ConnectionLimitError, NotFoundError
 from app.models.entities import Account, BankConnection, Transaction, require_id
 from app.services.ai import AIEngine
-from app.services.pluggy import PluggyClient
+from app.services.pluggy import PluggyClient, PluggyTransaction
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,80 @@ def _ensure_pluggy_item_owner(
     raise NotFoundError("Bank connection not found.")
 
 
+def _dedupe_remote_transactions(
+    remote: list[PluggyTransaction],
+) -> list[PluggyTransaction]:
+    """Keep the first copy when one fetch repeats a Pluggy transaction id.
+
+    Cursor pages can overlap. Rows already stored are not visible for an id
+    that this payload is about to insert, so a repeated id would land twice.
+    """
+    seen: set[str] = set()
+    unique: list[PluggyTransaction] = []
+    for item in remote:
+        if item.transaction_id in seen:
+            continue
+        seen.add(item.transaction_id)
+        unique.append(item)
+    return unique
+
+
+def _oldest_by_pluggy_id(rows: list[Transaction]) -> dict[str, Transaction]:
+    """Map each Pluggy id to the row the migration would keep."""
+    known: dict[str, Transaction] = {}
+    for row in rows:
+        current = known.get(row.pluggy_transaction_id)
+        if current is None or (
+            row.id is not None and current.id is not None and row.id < current.id
+        ):
+            known[row.pluggy_transaction_id] = row
+    return known
+
+
+def _apply_remote_fields(stored: Transaction, remote: PluggyTransaction) -> bool:
+    """Refresh Pluggy fields. The stored category stays put."""
+    changed = False
+    if stored.description != remote.description:
+        stored.description = remote.description
+        changed = True
+    if stored.amount != remote.amount:
+        stored.amount = remote.amount
+        changed = True
+    if stored.transaction_date != remote.transaction_date:
+        stored.transaction_date = remote.transaction_date
+        changed = True
+    return changed
+
+
+def _persist_new_transaction(session: Session, row: Transaction) -> None:
+    """Insert a row, or update the stored one when the unique key already won.
+
+    The select above this call is the upsert. The savepoint covers a second
+    sync that inserts the same pair between that select and this flush. That
+    race is rejected only after ``uq_transactions_account_pluggy_id`` exists.
+    """
+    try:
+        with session.begin_nested():
+            session.add(row)
+            session.flush()
+    except IntegrityError:
+        # A failed flush inside the savepoint already drops the pending row.
+        if row in session:
+            session.expunge(row)
+        stored = session.exec(
+            select(Transaction).where(
+                Transaction.account_id == row.account_id,
+                Transaction.pluggy_transaction_id == row.pluggy_transaction_id,
+            )
+        ).first()
+        if stored is None:
+            raise
+        stored.description = row.description
+        stored.amount = row.amount
+        stored.transaction_date = row.transaction_date
+        session.add(stored)
+
+
 def _on_event_loop(func: Any, /, *args: Any) -> Any:
     """Run one async Pluggy call on the server loop and wait on this thread.
 
@@ -205,17 +280,21 @@ def sync_item(
         accounts_synced += 1
         account_id = require_id(account.id)
 
-        known_ids = {
-            row.pluggy_transaction_id
-            for row in session.exec(
-                select(Transaction).where(Transaction.account_id == account_id)
-            ).all()
-        }
+        known = _oldest_by_pluggy_id(
+            list(
+                session.exec(
+                    select(Transaction).where(Transaction.account_id == account_id)
+                ).all()
+            )
+        )
 
-        for remote_tx in _on_event_loop(
-            pluggy.fetch_transactions, remote_account.account_id
+        for remote_tx in _dedupe_remote_transactions(
+            _on_event_loop(pluggy.fetch_transactions, remote_account.account_id)
         ):
-            if remote_tx.transaction_id in known_ids:
+            stored = known.get(remote_tx.transaction_id)
+            if stored is not None:
+                if _apply_remote_fields(stored, remote_tx):
+                    session.add(stored)
                 continue
             new_transactions.append(
                 Transaction(
@@ -236,13 +315,16 @@ def sync_item(
         ]
         categories, guarded = ai.categorize(payload)
 
+        # Flush refreshed rows before the per-row savepoint, so a conflict
+        # rolls back only the new insert.
+        session.flush()
         for transaction in new_transactions:
             category = categories.get(transaction.pluggy_transaction_id)
             if category:
                 transaction.category = category
                 transaction.is_guarded = guarded
                 categorized += 1
-            session.add(transaction)
+            _persist_new_transaction(session, transaction)
 
         session.commit()
 

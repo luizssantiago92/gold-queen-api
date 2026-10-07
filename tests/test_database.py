@@ -20,7 +20,7 @@ _ADMIN_URL = "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/postgres"
 _CHECK_URL = (
     "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/gold_queen_schema_check"
 )
-_HEAD = "c7a1b5e0d942"
+_HEAD = "d4e7a2b81c05"
 _TABLES = {
     "users",
     "bank_connections",
@@ -174,6 +174,10 @@ def test_alembic_head_matches_models_on_a_fresh_postgres(
         }
         assert "uq_chat_usage_user_date" in chat_names
         assert "uq_demo_chat_usage_subject_date" in demo_names
+        transaction_names = {
+            item["name"] for item in inspector.get_unique_constraints("transactions")
+        }
+        assert "uq_transactions_account_pluggy_id" in transaction_names
     finally:
         get_engine().dispose()
         monkeypatch.setattr("app.core.database._engine", None)
@@ -183,7 +187,9 @@ def test_deployment_doc_names_alembic_as_the_only_schema_source() -> None:
     text_body = Path("docs/deployment.md").read_text()
     assert "Alembic" in text_body
     assert "alembic upgrade head" in text_body
-    assert "alembic stamp head" in text_body
+    assert "alembic stamp c7a1b5e0d942" in text_body
+    assert "d4e7a2b81c05" in text_body
+    assert "uq_transactions_account_pluggy_id" in text_body
     assert "enable_row_level_security" in text_body
     for table in (
         "users",

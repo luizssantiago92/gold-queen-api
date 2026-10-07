@@ -97,6 +97,13 @@ class Account(SQLModel, table=True):
 
 class Transaction(SQLModel, table=True):
     __tablename__ = "transactions"
+    __table_args__ = (
+        UniqueConstraint(
+            "account_id",
+            "pluggy_transaction_id",
+            name="uq_transactions_account_pluggy_id",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     account_id: int = Field(foreign_key="accounts.id", index=True)

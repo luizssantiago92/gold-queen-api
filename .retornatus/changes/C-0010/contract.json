@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0010",
+  "version": 1,
+  "what": "Make sync idempotent: skip a repeated Pluggy transaction id inside one fetch, and upsert on (account_id, pluggy_transaction_id). Add an Alembic revision that deletes existing copies that share (account_id, pluggy_transaction_id) and copies that share (account_id, description, amount, transaction_date), keeping the oldest id in each group, then adds unique constraint uq_transactions_account_pluggy_id. Downgrade drops that constraint and does not restore deleted rows.",
+  "constraints": [],
+  "done_criteria": [
+    "A fetch that repeats one Pluggy transaction id stores a single row for that account.",
+    "A later sync of the same (account_id, pluggy_transaction_id) updates description, amount, and date in place and does not insert another row.",
+    "The migration deletes extra rows that share (account_id, pluggy_transaction_id), keeping the oldest id, and deletes extra rows that share (account_id, description, amount, transaction_date), keeping the oldest id.",
+    "The migration adds unique constraint uq_transactions_account_pluggy_id. Inserting the same (account_id, pluggy_transaction_id) again fails. Downgrade drops the constraint and does not restore deleted rows.",
+    "Tests cover the in-fetch skip, the upsert, and the migration upgrade and downgrade.",
+    "CHANGELOG Unreleased records the dedupe. docs/data-model.md, docs/deployment.md, and ADR 0002 name the new head and the constraint. The version in pyproject.toml stays 1.0.0.",
+    "A review note covers the migration. A ship rollback note says rollback is alembic downgrade c7a1b5e0d942, which drops the constraint and does not restore deleted rows, and that Render does not run Alembic so the owner runs alembic upgrade head once after merge."
+  ],
+  "active": true,
+  "activated_at": "2026-10-07T18:17:26.096349Z"
+}

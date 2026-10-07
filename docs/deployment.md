@@ -20,16 +20,22 @@ Alembic (`alembic/versions`) is the only schema source. Startup calls `SQLModel.
 alembic upgrade head
 ```
 
-Head is `c7a1b5e0d942`. Render starts uvicorn and does not run migrations, so apply them before or with the deploy that needs them.
+Head is `d4e7a2b81c05`. Render starts uvicorn and does not run migrations, so apply them once with `alembic upgrade head` after the deploy that needs them.
 
-**This production database.** It was created by the Supabase migrations `initial_schema` and `enable_row_level_security`, not by Alembic, and it has no `alembic_version` table. Do not run `alembic upgrade head` there: that tries to create tables that already exist.
+**This production database.** It was created by the Supabase migrations `initial_schema` and `enable_row_level_security`, not by Alembic. Do not run `alembic upgrade head` while `alembic_version` is missing: that tries to create tables that already exist.
 
 Revision `c7a1b5e0d942` is already applied by hand: unique constraints `uq_chat_usage_user_date` on `chat_usage (user_id, usage_date)` and `uq_demo_chat_usage_subject_date` on `demo_chat_usage (user_id, subject_key, usage_date)`, and these six columns as `timestamptz`: `users.created_at`, `bank_connections.last_synced_at`, `bank_connections.created_at`, `accounts.updated_at`, `transactions.created_at`, `chat_cache.created_at`.
 
-After confirming the live schema still matches that revision, record it once. The command writes `alembic_version` and does not change tables:
+If `alembic_version` is still missing, record that revision once after confirming the live schema matches it. The command writes `alembic_version` and does not change tables. Do not stamp `head` after `d4e7a2b81c05` exists, or the dedupe revision is skipped:
 
 ```bash
-alembic stamp head
+alembic stamp c7a1b5e0d942
+```
+
+**Revision `d4e7a2b81c05`.** It deletes duplicate `transactions` rows and adds `uq_transactions_account_pluggy_id`. Render does not run Alembic. After merge, with `alembic_version` at `c7a1b5e0d942` (or older, once that revision is stamped), run this once:
+
+```bash
+alembic upgrade head
 ```
 
 **Later schema changes.** Each one is a new Alembic revision, applied with `alembic upgrade head` before or with the deploy. Process startup does not change the Postgres schema.
@@ -52,7 +58,7 @@ Two details that differ from what the Supabase dashboard shows by default:
 
 On Windows the failure is easy to misread: psycopg2 tries to decode the server error message using the local code page and raises `UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe3` instead of the real connection error. If you see that, suspect connectivity, not credentials.
 
-3. Set it as `DATABASE_URL`. On a fresh database, run `alembic upgrade head` first, then create the demo users. On this production database, `alembic stamp head` once (see above) is the schema step; the tables are already there.
+3. Set it as `DATABASE_URL`. On a fresh database, run `alembic upgrade head` first, then create the demo users. On this production database, stamp `c7a1b5e0d942` once if `alembic_version` is missing (see above), then run `alembic upgrade head` so revision `d4e7a2b81c05` deletes duplicate transactions and adds `uq_transactions_account_pluggy_id`. Render does not run that command.
 
 ```bash
 python -m app.seed
@@ -131,6 +137,6 @@ Two failure modes look identical from the outside and are worth ruling out first
 - [ ] `POST /v1/connections/connect` as the demo user returns `403` / `demo_read_only`
 - [ ] `ALLOW_REGISTRATION` is unset or `false` on the live service, unless public signup should be open
 - [ ] The frontend origin is present in `CORS_ORIGINS`
-- [ ] The schema step matches the database: `alembic upgrade head` on a fresh Postgres, or `alembic stamp head` once on the existing Supabase database (`alembic_version` = `c7a1b5e0d942`)
+- [ ] The schema step matches the database: `alembic upgrade head` on a fresh Postgres. On the existing Supabase database, `alembic stamp c7a1b5e0d942` once if `alembic_version` is missing, then `alembic upgrade head` so head is `d4e7a2b81c05` (`uq_transactions_account_pluggy_id`). Render does not run Alembic.
 - [ ] `JWT_SECRET` is not the default placeholder and is at least 32 characters (`ENVIRONMENT=production` will not boot otherwise)
 - [ ] `CORS_ORIGIN_REGEX` is unset or anchored to `VERCEL_TEAM_SLUG` (not `gold-queen-web-*`)

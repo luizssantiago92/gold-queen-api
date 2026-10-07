@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - HTTP 429 from the model provider is retried, honoring `Retry-After` up to 8 seconds.
 - Timestamps are stored as timezone-aware UTC, so JSON includes an offset.
 
+### Fixed
+
+- Bank sync skips a repeated Pluggy transaction id in one fetch and upserts on `(account_id, pluggy_transaction_id)`, so the same movement is not inserted twice. Alembic revision `d4e7a2b81c05` deletes stored copies that share a Pluggy id in one account, and copies that share account, description, amount, and date, keeping the oldest id, then adds `uq_transactions_account_pluggy_id`. Render does not run Alembic; apply the revision once with `alembic upgrade head`.
+
 ### Security
 
 - Unknown emails no longer skip the password check.

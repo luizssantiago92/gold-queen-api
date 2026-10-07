@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0010",
+  "title": "Dedupe transactions by Pluggy id",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Live Pluggy sandbox demo (Pluggy Bank, synced 2026-08-28) stores repeated transactions in one account: NETFLIX.COM, SPOTIFY AB, SMART FIT ACADEMIA, and SALARIO EMPRESA XYZ LTDA at R$ 8500 on the same date. Monthly income shows R$ 34000. Sync must be idempotent and existing copies must be removed.",
+    "kind": "BUG"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-07T18:17:26.088906Z"
+}
