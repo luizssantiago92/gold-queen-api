@@ -47,7 +47,7 @@
       "lifecycle": "COMPLETED",
       "depends_on": [],
       "resources": [
-        "docs/adr"
+        "docs/adr/**"
       ]
     },
     {
@@ -68,7 +68,8 @@
       "depends_on": [],
       "resources": [
         "docs/README.md",
-        "README.md"
+        "README.md",
+        "CHANGELOG.md"
       ]
     }
   ],
