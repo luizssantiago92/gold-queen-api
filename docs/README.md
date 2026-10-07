@@ -6,11 +6,15 @@ Technical documentation for the Gold Queen backend. Start with the [repository R
 
 | Document | Audience | Description |
 | --- | --- | --- |
+| [requirements.md](requirements.md) | Engineers, reviewers | Current functional (RF) and non-functional (RNF) requirements, traced to code and tests |
+| [data-model.md](data-model.md) | Engineers | PostgreSQL tables, Mermaid ER diagram, constraints, row-level security |
+| [adr/README.md](adr/README.md) | Engineers | Decision records for the stack, hosts, auth, Gemini, the demo, and Retornatus |
 | [architecture.md](architecture.md) | Engineers | Layers, services, data model, AI and sync flows |
 | [frontend-integration.md](frontend-integration.md) | Frontend devs | Auth, JSON contracts, errors, TanStack Query keys |
 | [deployment.md](deployment.md) | DevOps | Supabase, Render, environment variables, CORS |
 | [demo-operations.md](demo-operations.md) | Demo / portfolio | Seeding users, linking sandbox banks, date refresh |
-| [history/PRD.md](history/PRD.md) | Archive | Original product brief. Current behavior is the README and the guides above |
+| [../SECURITY.md](../SECURITY.md) | Reporters, reviewers | Supported versions, private vulnerability reports, controls in the code |
+| [history/PRD.md](history/PRD.md) | Archive | Original product brief. Current behavior is [requirements.md](requirements.md) |
 
 ## Quick links
 
