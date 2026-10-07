@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "C-0010/E-011",
+  "type": "repository_observation",
+  "subject": "ship rollback",
+  "source": "Rollback is reverting this revision and running alembic downgrade c7a1b5e0d942. That drops uq_transactions_account_pluggy_id and does not restore deleted transaction rows. Sync upsert code rolls back with the application commit. No Render environment variable changes. Render does not run Alembic, so the owner runs alembic upgrade head once after merge. Do not reset the Supabase database.",
+  "producer": "agent",
+  "observed_at": "2026-10-07T18:28:44.622368Z",
+  "subject_state": null,
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": []
+}

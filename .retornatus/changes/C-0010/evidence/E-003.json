@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "C-0010/E-003",
+  "type": "test_result",
+  "subject": "The migration deletes extra rows that share (account_id, pluggy_transaction_id),",
+  "source": "pytest",
+  "producer": "retornatus",
+  "observed_at": "2026-10-07T18:28:30.672943Z",
+  "subject_state": "commit:e8b399abdfe9dc7af9b34ddb02f71a3cf0960165",
+  "provenance": "executed",
+  "command": [
+    "uv",
+    "run",
+    "pytest",
+    "-q"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-10-07T18:27:56.124793Z",
+  "ended_at": "2026-10-07T18:28:30.311475Z",
+  "duration_ms": 34186,
+  "output_sha256": "fcfc3815c135b2d2c67dbd1febe6d06ca2c60a3daf4285471518f090ee3d5eff",
+  "output_tail": "........................................................................ [ 40%]\n...............................s........................................ [ 80%]\n...................................                                      [100%]\n=============================== warnings summary ===============================\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_usage_rows_and_adds_the_constraint\ntests/test_migration.py::test_upgrade_dedupes_transactions_and_adds_the_pluggy_constraint\ntests/test_migration.py::test_upgrade_dedupes_transactions_and_adds_the_pluggy_constraint\ntests/test_migration.py::test_upgrade_dedupes_transactions_and_adds_the_pluggy_constraint\ntests/test_migration.py::test_upgrade_dedupes_transactions_and_adds_the_pluggy_constraint\n  /workspace/.venv/lib/python3.12/site-packages/alembic/config.py:604: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.\n    util.warn_deprecated(\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n",
+  "output_artifact": ".retornatus/changes/C-0010/evidence/E-003.output.txt",
+  "git_commit": "e8b399abdfe9dc7af9b34ddb02f71a3cf0960165",
+  "worktree_dirty": false,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0010/claim-done-3",
+      "note": null
+    }
+  ]
+}
