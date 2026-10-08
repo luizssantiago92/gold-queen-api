@@ -1,7 +1,7 @@
 """Open Finance synchronization: Pluggy item -> accounts -> categorized transactions."""
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -133,6 +133,28 @@ def _ensure_pluggy_item_owner(
         user_id,
     )
     raise NotFoundError("Bank connection not found.")
+
+
+def _movement_key(
+    account_id: int,
+    description: str,
+    amount: Decimal,
+    transaction_date: date,
+) -> tuple[int, str, Decimal, date]:
+    """Identity of one movement when Pluggy mints a fresh id.
+
+    Amounts match in cents, so 8500 and 8500.00 are the same movement.
+    Two legitimate purchases on the same day, with the same description and
+    the same amount in cents, collapse into one row. The sandbox repeats
+    SALARIO EMPRESA XYZ LTDA under new ids; storing each copy would count
+    that salary again.
+    """
+    return (
+        account_id,
+        description,
+        amount.quantize(Decimal("0.01")),
+        transaction_date,
+    )
 
 
 def _dedupe_remote_transactions(
@@ -280,13 +302,21 @@ def sync_item(
         accounts_synced += 1
         account_id = require_id(account.id)
 
-        known = _oldest_by_pluggy_id(
-            list(
-                session.exec(
-                    select(Transaction).where(Transaction.account_id == account_id)
-                ).all()
-            )
+        stored_rows = list(
+            session.exec(
+                select(Transaction).where(Transaction.account_id == account_id)
+            ).all()
         )
+        known = _oldest_by_pluggy_id(stored_rows)
+        seen_movements = {
+            _movement_key(
+                account_id,
+                row.description,
+                row.amount,
+                row.transaction_date,
+            )
+            for row in stored_rows
+        }
 
         for remote_tx in _dedupe_remote_transactions(
             _on_event_loop(pluggy.fetch_transactions, remote_account.account_id)
@@ -295,7 +325,24 @@ def sync_item(
             if stored is not None:
                 if _apply_remote_fields(stored, remote_tx):
                     session.add(stored)
+                    seen_movements.add(
+                        _movement_key(
+                            account_id,
+                            stored.description,
+                            stored.amount,
+                            stored.transaction_date,
+                        )
+                    )
                 continue
+            movement = _movement_key(
+                account_id,
+                remote_tx.description,
+                remote_tx.amount,
+                remote_tx.transaction_date,
+            )
+            if movement in seen_movements:
+                continue
+            seen_movements.add(movement)
             new_transactions.append(
                 Transaction(
                     account_id=account_id,

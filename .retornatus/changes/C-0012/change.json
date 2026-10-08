@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0012",
+  "title": "Skip repeated movements when Pluggy mints a new id",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Production sync of Pluggy Bank on 2026-08-28 stored SALARIO EMPRESA XYZ LTDA four times because each copy had a different pluggy_transaction_id. The unique constraint on (account_id, pluggy_transaction_id) does not stop a later fetch that mints a new id for the same description, amount, and date. app.seed does not insert transactions and must stay unchanged. Credit-card bill payments are out of scope.",
+    "kind": "BUG"
+  },
+  "lane": "QUICK",
+  "active_contract_version": 2,
+  "relations": [],
+  "created_at": "2026-10-08T01:33:32.888601Z"
+}
