@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0012",
+  "version": 1,
+  "what": "In sync_item, skip a remote transaction whose (account_id, description, amount in cents, transaction_date) already exists, and apply that same key inside one fetch so four sandbox salary rows become one. A code comment records that two legitimate purchases with the same description, cent amount, and day collapse into one row.",
+  "constraints": [],
+  "done_criteria": [
+    "One fetch that repeats SALARIO EMPRESA XYZ LTDA four times under different Pluggy ids stores a single row.",
+    "A later sync that returns the same account, description, amount in cents, and date under a new Pluggy id does not insert another row.",
+    "Tests cover the in-fetch case and the cross-sync case.",
+    "A code comment states that two legitimate purchases with the same description, cent amount, and day collapse into one row.",
+    "app.seed is unchanged, and credit-card bill payments stay in expense totals."
+  ],
+  "active": true,
+  "activated_at": "2026-10-08T01:33:32.898061Z"
+}

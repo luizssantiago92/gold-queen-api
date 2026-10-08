@@ -31,7 +31,7 @@ Routers delegate to services and never call Pluggy or Gemini directly.
 | Service | Responsibility |
 | --- | --- |
 | `pluggy.py` | OAuth-style API key auth, `/v2/transactions` pagination, offline simulator |
-| `sync.py` | Item → accounts → transactions; insert-only dedup by `pluggy_transaction_id` |
+| `sync.py` | Item → accounts → transactions; dedup by Pluggy id and by description, cents, and date |
 | `ai.py` | Gemini calls + keyword fallbacks for categorization, tips, chat |
 | `treasury.py` | Balance aggregation, monthly totals, display categories, transaction queries |
 | `display_category.py` | Maps descriptions + account type into UI buckets (Subscriptions, Bills, …) |

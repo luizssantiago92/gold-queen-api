@@ -20,7 +20,7 @@ A signed-in user can list linked banks, obtain a Pluggy connect token, sync an i
 
 - `GET /v1/connections` returns that user's rows only.
 - `POST /v1/connections/connect` refuses a new token once the user has `MAX_BANK_CONNECTIONS` banks (default 3) with `403` / `connection_limit_reached`.
-- `POST /v1/connections/sync` inserts a transaction only when its `pluggy_transaction_id` is new for that account. A repeat sync still updates balances and `last_synced_at`. A live item can be claimed on first sync only when Pluggy's `clientUserId` matches the user id. The offline simulator has no tenant, so it skips that check. An item already stored for someone else returns `404`, the same response as a missing connection.
+- `POST /v1/connections/sync` inserts a transaction when its `pluggy_transaction_id` is new for that account and the movement is new too. The movement key is account, description, amount in cents, and date. A later fetch that mints a new Pluggy id for that key is skipped, including copies inside the same fetch. Two legitimate purchases with the same description, cent amount, and day collapse into one row. The same Pluggy id still updates description, amount, and date. A repeat sync still updates balances and `last_synced_at`. A live item can be claimed on first sync only when Pluggy's `clientUserId` matches the user id. The offline simulator has no tenant, so it skips that check. An item already stored for someone else returns `404`, the same response as a missing connection.
 - `DELETE /v1/connections/{id}` removes that user's transactions, then accounts, then the connection, which frees a slot in the limit.
 - The public demo accounts receive `403` / `demo_read_only` on connect, sync, and delete (RF07).
 

@@ -7,8 +7,9 @@ Create Date: 2026-10-07 18:30:00.000000
 Deletes extra rows that share ``(account_id, pluggy_transaction_id)``, then
 extra rows that share ``(account_id, description, amount, transaction_date)``.
 Each group keeps the oldest ``id``. Amounts match after quantizing to cents,
-so ``8500`` and ``8500.00`` are the same copy. A later sync does not apply the
-description rule; it only upserts on the Pluggy id. Downgrade drops
+so ``8500`` and ``8500.00`` are the same copy. Sync also skips that
+description, cent amount, and date when a later fetch mints a new Pluggy id.
+Downgrade drops
 ``uq_transactions_account_pluggy_id`` and does not restore deleted rows.
 """
 

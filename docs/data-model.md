@@ -96,7 +96,7 @@ A checking or credit account under a connection. `connection_id` references `ban
 
 ### `transactions`
 
-A movement under an account. `account_id` references `accounts.id`. Unique constraint `uq_transactions_account_pluggy_id` is on `(account_id, pluggy_transaction_id)`. Sync skips a repeated Pluggy id inside one fetch and upserts on that pair: a later sync updates description, amount, and date and leaves the stored category. `pluggy_transaction_id` stays indexed on its own. `amount` is a signed `numeric(14, 2)`. `category` defaults to `Uncategorized` and is then set to the closed vocabulary. `is_guarded` defaults to false and is true only when the model batch passed the guardrail. `transaction_date` is indexed. Display categories used by the dashboard are computed at read time and are not stored.
+A movement under an account. `account_id` references `accounts.id`. Unique constraint `uq_transactions_account_pluggy_id` is on `(account_id, pluggy_transaction_id)`. Sync skips a repeated Pluggy id inside one fetch and upserts on that pair: a later sync updates description, amount, and date and leaves the stored category. Sync also skips a new Pluggy id when `(account_id, description, amount in cents, transaction_date)` is already stored or already accepted in that fetch. Two purchases with the same description, cent amount, and day collapse into one row. `pluggy_transaction_id` stays indexed on its own. `amount` is a signed `numeric(14, 2)`. `category` defaults to `Uncategorized` and is then set to the closed vocabulary. `is_guarded` defaults to false and is true only when the model batch passed the guardrail. `transaction_date` is indexed. Display categories used by the dashboard are computed at read time and are not stored.
 
 ### `chat_cache`
 
@@ -116,7 +116,7 @@ Daily counter for a shared demo account, split by `subject_key` (the client addr
 | --- | --- |
 | `a630d3c39926` | Creates `users`, `bank_connections`, `accounts`, `transactions`, `chat_cache`, and `chat_usage`. Timestamps are `timestamp without time zone`. |
 | `c7a1b5e0d942` | Adds `uq_chat_usage_user_date` after summing duplicate counters into the oldest row. Creates `demo_chat_usage` when it is missing. On PostgreSQL, converts the six timestamp columns above with `AT TIME ZONE 'UTC'`. |
-| `d4e7a2b81c05` | Deletes extra `transactions` rows that share `(account_id, pluggy_transaction_id)`, then extra rows that share `(account_id, description, amount, transaction_date)`, keeping the oldest id in each group. Adds `uq_transactions_account_pluggy_id`. |
+| `d4e7a2b81c05` | Deletes extra `transactions` rows that share `(account_id, pluggy_transaction_id)`, then extra rows that share `(account_id, description, amount, transaction_date)`, keeping the oldest id in each group. Adds `uq_transactions_account_pluggy_id`. Later syncs keep applying that description, cent amount, and date key in `sync.py`. |
 
 `chat_usage` and `demo_chat_usage` are not in that timestamp list. Downgrade of `c7a1b5e0d942` converts timestamps back to naive UTC and drops the unique constraints. It leaves `demo_chat_usage` in place and does not split merged counters. Downgrade of `d4e7a2b81c05` drops `uq_transactions_account_pluggy_id` and does not restore deleted transaction rows.
 

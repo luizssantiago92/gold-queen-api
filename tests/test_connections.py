@@ -8,6 +8,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import httpx
 import pytest
@@ -457,6 +458,131 @@ def test_sync_collapses_a_repeated_pluggy_id_and_upserts_on_the_next_fetch(
     assert rows[0].category == "Income"
     refreshed = auth_client.get("/v1/dashboard/overview").json()
     assert Decimal(str(refreshed["month_income"])) == Decimal("9000.00")
+
+
+ITEM_MOVEMENT = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+
+
+def _serve_movement_pages(
+    monkeypatch: pytest.MonkeyPatch,
+    auth_client: TestClient,
+    pages: list[list[dict[str, object]]],
+) -> dict[str, int]:
+    """Answer Pluggy with one transaction page per sync, in order."""
+    user_id = str(auth_client.get("/v1/auth/me").json()["id"])
+    state = {"count": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth":
+            return httpx.Response(200, json={"apiKey": "key"})
+        if request.url.path.startswith("/items/"):
+            return httpx.Response(
+                200,
+                json={
+                    "id": ITEM_MOVEMENT,
+                    "status": "UPDATED",
+                    "clientUserId": user_id,
+                    "connector": {"name": "Pluggy Bank"},
+                },
+            )
+        if request.url.path == "/accounts":
+            return httpx.Response(
+                200,
+                json={
+                    "results": [
+                        {
+                            "id": "acc-movement",
+                            "name": "Checking",
+                            "balance": 1000,
+                            "currencyCode": "BRL",
+                            "type": "BANK",
+                        }
+                    ]
+                },
+            )
+        index = min(state["count"], len(pages) - 1)
+        state["count"] += 1
+        return _pluggy_page(pages[index], None)
+
+    _enable_pluggy(monkeypatch, handler)
+    return state
+
+
+def test_sync_collapses_four_fresh_salary_ids_in_one_fetch(
+    auth_client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    today = date.today().isoformat()
+    amounts = ("8500", "8500.00", "8500.004", "8500")
+    salaries: list[dict[str, object]] = [
+        {
+            "id": f"tx-salary-{index}",
+            "description": "SALARIO EMPRESA XYZ LTDA",
+            "amount": amount,
+            "date": today,
+        }
+        for index, amount in enumerate(amounts, start=1)
+    ]
+    _serve_movement_pages(monkeypatch, auth_client, [salaries])
+
+    response = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_MOVEMENT})
+    assert response.status_code == 200
+    assert response.json()["transactions_synced"] == 1
+
+    rows = session.exec(select(Transaction)).all()
+    assert len(rows) == 1
+    assert rows[0].pluggy_transaction_id == "tx-salary-1"
+    assert rows[0].amount == Decimal("8500")
+    overview = auth_client.get("/v1/dashboard/overview").json()
+    assert Decimal(str(overview["month_income"])) == Decimal("8500.00")
+
+
+def test_sync_skips_a_stored_movement_when_pluggy_mints_a_new_id(
+    auth_client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    today = date.today().isoformat()
+    salary = {
+        "description": "SALARIO EMPRESA XYZ LTDA",
+        "date": today,
+    }
+    first_page: list[dict[str, object]] = [
+        {"id": "tx-salary-a", "amount": "8500", **salary}
+    ]
+    second_page: list[dict[str, object]] = [
+        {"id": "tx-salary-b", "amount": "8500.004", **salary},
+        {"id": "tx-salary-other", "amount": "100.00", **salary},
+        {
+            "id": "tx-netflix",
+            "description": "NETFLIX.COM",
+            "amount": "-39.90",
+            "date": today,
+        },
+    ]
+    _serve_movement_pages(
+        monkeypatch,
+        auth_client,
+        [first_page, second_page],
+    )
+
+    first = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_MOVEMENT})
+    assert first.status_code == 200
+    assert first.json()["transactions_synced"] == 1
+
+    second = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_MOVEMENT})
+    assert second.status_code == 200
+    assert second.json()["transactions_synced"] == 2
+
+    rows = session.exec(select(Transaction)).all()
+    by_id = {row.pluggy_transaction_id: row for row in rows}
+    assert set(by_id) == {"tx-salary-a", "tx-salary-other", "tx-netflix"}
+    assert by_id["tx-salary-a"].amount == Decimal("8500")
+    assert by_id["tx-salary-other"].amount == Decimal("100.00")
+    overview = auth_client.get("/v1/dashboard/overview").json()
+    assert Decimal(str(overview["month_income"])) == Decimal("8600.00")
+
+
+def test_movement_key_comment_records_identical_purchases_collapse() -> None:
+    source = Path("app/services/sync.py").read_text(encoding="utf-8")
+    assert "collapse into one row" in source
 
 
 def test_persist_new_transaction_updates_the_row_when_the_key_exists(

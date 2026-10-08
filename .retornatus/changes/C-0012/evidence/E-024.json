@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "C-0012/E-024",
+  "type": "lint_result",
+  "subject": "ruff",
+  "source": "ruff",
+  "producer": "retornatus",
+  "observed_at": "2026-10-08T01:42:50.755215Z",
+  "subject_state": "commit:5caec7b4fc81c4a3b5b3bb7fe685bdcd2b0ac535",
+  "provenance": "executed",
+  "command": [
+    "uv",
+    "run",
+    "ruff",
+    "check",
+    "app",
+    "tests",
+    "scripts",
+    "alembic"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-10-08T01:42:50.469614Z",
+  "ended_at": "2026-10-08T01:42:50.494115Z",
+  "duration_ms": 24,
+  "output_sha256": "5b196eb3a6acb50d3fa398d04ca284985cc1ffec870e940264b00780bfd2c971",
+  "output_tail": "\u001b[1;32mAll checks passed!\u001b[0m\n",
+  "output_artifact": ".retornatus/changes/C-0012/evidence/E-024.output.txt",
+  "git_commit": "5caec7b4fc81c4a3b5b3bb7fe685bdcd2b0ac535",
+  "worktree_dirty": false,
+  "timed_out": false,
+  "relations": []
+}

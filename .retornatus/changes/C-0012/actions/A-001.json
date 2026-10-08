@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "C-0012/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "In sync_item, skip a remote transaction whose (account_id, description, amount in cents, transaction_date) already exists, and apply that same key inside one fetch so four sandbox salary rows become one. A code comment records that two legitimate purchases with the same description, cent amount, and day collapse into one row.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "One fetch that repeats SALARIO EMPRESA XYZ LTDA four times under different Pluggy ids stores a single row.",
+    "A later sync that returns the same account, description, amount in cents, and date under a new Pluggy id does not insert another row.",
+    "Tests cover the in-fetch case and the cross-sync case.",
+    "A code comment states that two legitimate purchases with the same description, cent amount, and day collapse into one row.",
+    "app.seed is unchanged, and credit-card bill payments stay in expense totals."
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0012/T-001",
+      "description": "Skip a remote row in sync_item when (account_id, description, amount in cents, transaction_date) is already stored or already accepted in the same fetch, and comment the identical-purchase tradeoff.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/services/sync.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0012/T-002",
+      "description": "Add tests for four fresh salary ids in one fetch and for a later sync that mints a new id for the same movement.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "tests/test_connections.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0012/T-003",
+      "description": "Update the sync sentences that still say a later fetch inserts any new Pluggy id, including the identical-purchase tradeoff in the changelog.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "CHANGELOG.md",
+        "docs/requirements.md",
+        "docs/data-model.md",
+        "docs/architecture.md",
+        "README.md",
+        "alembic/versions/d4e7a2b81c05_dedupe_transactions.py"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}

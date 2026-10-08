@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "C-0012/E-017",
+  "type": "review_result",
+  "subject": "A review note covers the migration header wording.",
+  "source": "Reviewed alembic/versions/d4e7a2b81c05_dedupe_transactions.py. The header now says sync skips the same description, cent amount, and date when a later fetch mints a new Pluggy id. Upgrade and downgrade are unchanged: downgrade drops uq_transactions_account_pluggy_id and does not restore deleted rows. This change adds no revision.",
+  "producer": "agent",
+  "observed_at": "2026-10-08T01:41:52.186495Z",
+  "subject_state": null,
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": [
+    {
+      "type": "SUPPORTS",
+      "target_id": "C-0012/claim-done-6",
+      "note": null
+    }
+  ]
+}
