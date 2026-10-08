@@ -513,7 +513,7 @@ def test_sync_collapses_four_fresh_salary_ids_in_one_fetch(
 ) -> None:
     today = date.today().isoformat()
     amounts = ("8500", "8500.00", "8500.004", "8500")
-    salaries = [
+    salaries: list[dict[str, object]] = [
         {
             "id": f"tx-salary-{index}",
             "description": "SALARIO EMPRESA XYZ LTDA",
@@ -544,22 +544,23 @@ def test_sync_skips_a_stored_movement_when_pluggy_mints_a_new_id(
         "description": "SALARIO EMPRESA XYZ LTDA",
         "date": today,
     }
+    first_page: list[dict[str, object]] = [
+        {"id": "tx-salary-a", "amount": "8500", **salary}
+    ]
+    second_page: list[dict[str, object]] = [
+        {"id": "tx-salary-b", "amount": "8500.004", **salary},
+        {"id": "tx-salary-other", "amount": "100.00", **salary},
+        {
+            "id": "tx-netflix",
+            "description": "NETFLIX.COM",
+            "amount": "-39.90",
+            "date": today,
+        },
+    ]
     _serve_movement_pages(
         monkeypatch,
         auth_client,
-        [
-            [{"id": "tx-salary-a", "amount": "8500", **salary}],
-            [
-                {"id": "tx-salary-b", "amount": "8500.004", **salary},
-                {"id": "tx-salary-other", "amount": "100.00", **salary},
-                {
-                    "id": "tx-netflix",
-                    "description": "NETFLIX.COM",
-                    "amount": "-39.90",
-                    "date": today,
-                },
-            ],
-        ],
+        [first_page, second_page],
     )
 
     first = auth_client.post("/v1/connections/sync", json={"item_id": ITEM_MOVEMENT})
