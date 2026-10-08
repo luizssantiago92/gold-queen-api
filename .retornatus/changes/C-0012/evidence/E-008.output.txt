@@ -1,0 +1,2 @@
+tests/test_connections.py:525: error: List item 0 has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [list-item]
+Found 1 error in 1 file (checked 67 source files)

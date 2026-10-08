@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "C-0012/E-018",
+  "type": "repository_observation",
+  "subject": "ship rollback",
+  "source": "No new Alembic revision. Rollback of this change is reverting the application commit. The already-applied revision d4e7a2b81c05 still downgrades with alembic downgrade c7a1b5e0d942, which drops uq_transactions_account_pluggy_id and does not restore deleted rows. Render does not run Alembic. This pull request does not need another alembic upgrade.",
+  "producer": "agent",
+  "observed_at": "2026-10-08T01:41:52.399866Z",
+  "subject_state": null,
+  "provenance": "self_reported",
+  "command": null,
+  "exit_code": null,
+  "started_at": null,
+  "ended_at": null,
+  "duration_ms": null,
+  "output_sha256": null,
+  "output_tail": null,
+  "output_artifact": null,
+  "git_commit": null,
+  "worktree_dirty": null,
+  "timed_out": false,
+  "relations": []
+}
