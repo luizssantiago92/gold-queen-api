@@ -1,5 +1,6 @@
 """Treasury analytics shared by the dashboard and the AI advisor."""
 
+import re
 from datetime import date
 from decimal import Decimal
 
@@ -11,6 +12,10 @@ from app.models.entities import Account, BankConnection, Transaction
 from app.services.display_category import classify_display
 
 ZERO = Decimal("0.00")
+
+# Narrower than the CreditCard display label, which also matches visa and
+# mastercard. Those words appear on purchases that must stay in expenses.
+_CARD_BILL_SETTLEMENT = re.compile(r"fatura|pagamento fat", re.I)
 
 
 def _quantize(value: Decimal) -> Decimal:
@@ -127,6 +132,20 @@ def user_transactions(
     ]
 
 
+def is_card_bill_settlement(transaction: Transaction, account: Account) -> bool:
+    """A checking-account payment that settles a card bill.
+
+    Card purchases stay in expenses, and this row stays in the transaction
+    feed. Only a negative amount on a BANK account whose description matches
+    fatura or pagamento fat is left out of expense totals.
+    """
+    if transaction.amount >= 0:
+        return False
+    if account.account_type.strip().upper() != "BANK":
+        return False
+    return _CARD_BILL_SETTLEMENT.search(transaction.description) is not None
+
+
 def display_category_for(
     transaction: Transaction,
     account: Account,
@@ -171,7 +190,9 @@ def month_totals(session: Session, user_id: int) -> tuple[Decimal, Decimal]:
     start, end = month_bounds()
     expenses = ZERO
     income = ZERO
-    for transaction, _ in user_transactions(session, user_id, start, end):
+    for transaction, account, _ in user_transaction_rows(session, user_id, start, end):
+        if is_card_bill_settlement(transaction, account):
+            continue
         if transaction.amount < 0:
             expenses += -transaction.amount
         else:
@@ -189,7 +210,7 @@ def expenses_by_category(
     start, end = month_bounds()
     breakdown: dict[str, tuple[Decimal, int]] = {}
     for transaction, account, _ in user_transaction_rows(session, user_id, start, end):
-        if transaction.amount >= 0:
+        if transaction.amount >= 0 or is_card_bill_settlement(transaction, account):
             continue
         label = display_category_for(transaction, account)
         total, count = breakdown.get(label, (ZERO, 0))
@@ -209,8 +230,8 @@ def daily_cumulative_expenses(
     start, end = month_bounds(today)
 
     per_day: dict[date, Decimal] = {}
-    for transaction, _ in user_transactions(session, user_id, start, end):
-        if transaction.amount >= 0:
+    for transaction, account, _ in user_transaction_rows(session, user_id, start, end):
+        if transaction.amount >= 0 or is_card_bill_settlement(transaction, account):
             continue
         day = transaction.transaction_date
         per_day[day] = per_day.get(day, ZERO) + -transaction.amount
@@ -264,6 +285,8 @@ def build_ai_summary(session: Session, user_id: int) -> str:
         "connections.\n"
         f"- The user may ask the Gold Queen {settings.chat_daily_limit} "
         "questions per day.\n"
+        "- A bank payment whose description matches fatura or pagamento fat "
+        "is not an expense. Card purchases remain expenses.\n"
         "\n"
         f"Reference month: {reference}\n"
         f"Total balance across banks: R$ {balance}\n"

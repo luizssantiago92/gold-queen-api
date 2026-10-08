@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0013",
+  "title": "Leave card-bill settlements out of expenses",
+  "demand": {
+    "schema_version": 1,
+    "statement": "Demo expenses double-count a bank payment PAGAMENTO FATURA CARTAO VISA of -167.70 when that amount equals the Mastercard Black card purchases. Month totals, category split, the daily series, and the AI context add every negative amount. The payment must stay in the transaction feed, and card purchases must stay in expenses. Transaction grounding, timeouts, and quota consistency are out of scope.",
+    "kind": "BUG"
+  },
+  "lane": "COMPLEX",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-08T02:53:19.930044Z"
+}
