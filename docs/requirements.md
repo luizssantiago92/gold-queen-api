@@ -51,6 +51,8 @@ Dashboard routes read PostgreSQL. They do not call Pluggy. Amounts are `Decimal`
 
 `display_category` is computed at read time from the description and account type (`app/services/display_category.py`). It is not a column. The stored `category` remains the closed vocabulary from RF02. An empty treasury returns zero totals.
 
+Month expenses, the category split, the daily series, and the AI summary omit a negative `BANK` payment whose description matches `fatura` or `pagamento fat`. Card purchases stay in those totals. `GET /v1/dashboard/transactions` still lists the payment.
+
 Trace: `app/routers/dashboard.py`, `app/services/treasury.py`, `tests/test_dashboard.py`, `tests/test_display_category.py`.
 
 ### RF04 — Queen's Tips

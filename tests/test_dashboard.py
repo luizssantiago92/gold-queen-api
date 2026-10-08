@@ -2,10 +2,163 @@
 
 import re
 from datetime import date
+from decimal import Decimal
 
 from fastapi.testclient import TestClient
 from sqlalchemy import event
 from sqlmodel import Session
+
+from app.models.entities import Account, BankConnection, Transaction, require_id
+from app.services.treasury import (
+    build_ai_summary,
+    daily_cumulative_expenses,
+    expenses_by_category,
+    is_card_bill_settlement,
+    month_totals,
+)
+
+
+def test_card_bill_payment_is_left_out_of_expenses(
+    auth_client: TestClient, session: Session
+) -> None:
+    user_id = auth_client.get("/v1/auth/me").json()["id"]
+    today = date.today()
+    connection = BankConnection(
+        user_id=user_id,
+        pluggy_item_id="item-card-bill",
+        institution_name="Pluggy Bank",
+        status="UPDATED",
+    )
+    session.add(connection)
+    session.commit()
+    session.refresh(connection)
+    connection_id = require_id(connection.id)
+    bank = Account(
+        connection_id=connection_id,
+        pluggy_account_id="acc-checking",
+        name="Checking",
+        account_type="BANK",
+        balance=Decimal("1000.00"),
+    )
+    card = Account(
+        connection_id=connection_id,
+        pluggy_account_id="acc-black",
+        name="Mastercard Black",
+        account_type="CREDIT",
+        balance=Decimal("-167.70"),
+    )
+    session.add(bank)
+    session.add(card)
+    session.commit()
+    session.refresh(bank)
+    session.refresh(card)
+    bank_id = require_id(bank.id)
+    card_id = require_id(card.id)
+    purchases = (
+        ("tx-netflix", "NETFLIX.COM", Decimal("-100.00")),
+        ("tx-gym", "SMART FIT ACADEMIA", Decimal("-67.70")),
+    )
+    for pluggy_id, description, amount in purchases:
+        session.add(
+            Transaction(
+                account_id=card_id,
+                pluggy_transaction_id=pluggy_id,
+                description=description,
+                amount=amount,
+                transaction_date=today,
+            )
+        )
+    session.add(
+        Transaction(
+            account_id=bank_id,
+            pluggy_transaction_id="tx-bill",
+            description="PAGAMENTO FATURA CARTAO VISA",
+            amount=Decimal("-167.70"),
+            transaction_date=today,
+        )
+    )
+    session.commit()
+
+    expenses, income = month_totals(session, user_id)
+    assert expenses == Decimal("167.70")
+    assert income == Decimal("0.00")
+
+    categories = expenses_by_category(session, user_id)
+    assert sum((total for total, _ in categories.values()), Decimal("0")) == Decimal(
+        "167.70"
+    )
+    assert categories["CreditCard"] == (Decimal("167.70"), 2)
+
+    series = daily_cumulative_expenses(session, user_id, today)
+    assert series[-1] == (today, Decimal("167.70"))
+
+    summary = build_ai_summary(session, user_id)
+    assert "Month expenses: R$ 167.70" in summary
+
+    overview = auth_client.get("/v1/dashboard/overview").json()
+    assert overview["month_expenses"] == "167.70"
+    series_body = auth_client.get("/v1/dashboard/monthly-series").json()
+    assert series_body["total_expenses"] == "167.70"
+    feed = auth_client.get("/v1/dashboard/transactions?limit=20").json()
+    descriptions = [item["description"] for item in feed["items"]]
+    assert "PAGAMENTO FATURA CARTAO VISA" in descriptions
+    assert feed["total"] == 3
+
+
+def test_bill_settlement_keeps_credit_purchases() -> None:
+    today = date.today()
+    bank = Account(
+        connection_id=1,
+        pluggy_account_id="bank",
+        name="Checking",
+        account_type="BANK",
+    )
+    card = Account(
+        connection_id=1,
+        pluggy_account_id="card",
+        name="Mastercard Black",
+        account_type="CREDIT",
+    )
+    payment = Transaction(
+        account_id=1,
+        pluggy_transaction_id="bill",
+        description="PAGAMENTO FATURA CARTAO VISA",
+        amount=Decimal("-167.70"),
+        transaction_date=today,
+    )
+    visa_purchase = Transaction(
+        account_id=2,
+        pluggy_transaction_id="visa",
+        description="COMPRA VISA LOJA",
+        amount=Decimal("-40.00"),
+        transaction_date=today,
+    )
+    card_fatura = Transaction(
+        account_id=2,
+        pluggy_transaction_id="card-bill",
+        description="PAGAMENTO FATURA",
+        amount=Decimal("-10.00"),
+        transaction_date=today,
+    )
+    visa_on_bank = Transaction(
+        account_id=1,
+        pluggy_transaction_id="visa-bank",
+        description="COMPRA VISA LOJA",
+        amount=Decimal("-40.00"),
+        transaction_date=today,
+    )
+    incoming = Transaction(
+        account_id=1,
+        pluggy_transaction_id="incoming-bill",
+        description="PAGAMENTO FATURA",
+        amount=Decimal("167.70"),
+        transaction_date=today,
+    )
+    assert is_card_bill_settlement(payment, bank)
+    assert not is_card_bill_settlement(visa_purchase, card)
+    assert not is_card_bill_settlement(card_fatura, card)
+    assert not is_card_bill_settlement(visa_on_bank, bank)
+    assert not is_card_bill_settlement(incoming, bank)
 
 
 def test_overview_is_empty_before_any_sync(auth_client: TestClient) -> None:

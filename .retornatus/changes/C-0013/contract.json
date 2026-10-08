@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0013",
+  "version": 1,
+  "what": "In treasury.py, leave a row out of month totals, the category split, the daily series, and the AI expense context only when the amount is negative, the account type is BANK, and the description matches fatura or pagamento fat. Card purchases stay in expenses. The payment stays in the transaction feed.",
+  "constraints": [],
+  "done_criteria": [
+    "When a BANK payment of -167.70 matches fatura and the credit-card purchases sum to 167.70, month expenses equal 167.70.",
+    "The category split, the daily series, and the AI summary month expenses equal those purchases.",
+    "The payment remains listed in the transaction feed.",
+    "A negative purchase on a CREDIT account stays inside expenses."
+  ],
+  "active": true,
+  "activated_at": "2026-10-08T02:53:19.934756Z"
+}

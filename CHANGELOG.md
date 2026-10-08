@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Month expenses, the category split, the daily series, and the AI summary omit a negative bank payment whose description matches `fatura` or `pagamento fat`, so a card-bill settlement is not counted on top of the card purchases. Card purchases stay in those totals. The payment stays in the transaction feed.
 - Bank sync skips a repeated Pluggy transaction id in one fetch and upserts on `(account_id, pluggy_transaction_id)`, so the same movement is not inserted twice. It also skips a new Pluggy id when the account, description, amount in cents, and date are already stored or already accepted in that fetch, so sandbox copies such as SALARIO EMPRESA XYZ LTDA four times become one row. Two legitimate purchases with the same description, cent amount, and day collapse into one row. Alembic revision `d4e7a2b81c05` deletes stored copies that share a Pluggy id in one account, and copies that share account, description, amount, and date, keeping the oldest id, then adds `uq_transactions_account_pluggy_id`. Render does not run Alembic; apply the revision once with `alembic upgrade head`.
 - The chat scope guard casefolds the question and the keyword lists and strips accents with NFKD before matching, so `Quais foram minhas 3 maiores transações este mês?` stays on treasury topics. Off-topic questions are still refused.
 

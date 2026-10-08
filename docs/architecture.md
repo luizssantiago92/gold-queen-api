@@ -62,9 +62,9 @@ Relationships: `User` → `BankConnection` → `Account` → `Transaction`.
 
 Demo accounts slide stale transaction dates forward on login (`maybe_refresh_demo`). Dashboard routes then only read:
 
-- **Overview** — sum balances, compute month income/expenses.
-- **Categories** — group current-month expenses by `display_category`.
-- **Monthly series** — cumulative daily expenses from day 1 through today.
+- **Overview** — sum balances, compute month income/expenses. A negative bank payment matching `fatura` or `pagamento fat` is not an expense.
+- **Categories** — group current-month expenses by `display_category`, with that same payment omitted.
+- **Monthly series** — cumulative daily expenses from day 1 through today, with that same payment omitted.
 - **Transactions** — current month only, paginated, newest first.
 
 ## AI guardrails
