@@ -4,6 +4,8 @@ Off-topic questions are rejected before quota is consumed or Gemini is called,
 keeping the advisor focused on treasury data and app features.
 """
 
+import unicodedata
+
 from app.core.locale import Locale
 
 # Finance, treasury, and Gold Queen app vocabulary (EN + PT).
@@ -150,16 +152,38 @@ _OFF_TOPIC_REPLIES: dict[Locale, str] = {
 }
 
 
+def _fold_match_text(value: str) -> str:
+    """Casefold and strip accents. 'Transações' and 'transacoes' compare equal.
+
+    NFKD splits ç and ê into a base letter plus a combining mark. The marks
+    are dropped. Marker spacing is kept, including the trailing space on
+    phrases such as 'quem é '.
+    """
+    decomposed = unicodedata.normalize("NFKD", value)
+    without_marks = "".join(
+        char for char in decomposed if not unicodedata.combining(char)
+    )
+    return without_marks.casefold()
+
+
+_IN_SCOPE_FOLDED: tuple[str, ...] = tuple(
+    _fold_match_text(marker) for marker in _IN_SCOPE_MARKERS
+)
+_OUT_OF_SCOPE_FOLDED: tuple[str, ...] = tuple(
+    _fold_match_text(marker) for marker in _OUT_OF_SCOPE_MARKERS
+)
+
+
 def is_chat_in_scope(question: str) -> bool:
     """Return True when the question belongs to treasury / app context."""
-    normalized = " ".join(question.lower().split())
+    normalized = " ".join(_fold_match_text(question).split())
     if not normalized:
         return False
 
-    if any(marker in normalized for marker in _OUT_OF_SCOPE_MARKERS):
+    if any(marker in normalized for marker in _OUT_OF_SCOPE_FOLDED):
         return False
 
-    return any(marker in normalized for marker in _IN_SCOPE_MARKERS)
+    return any(marker in normalized for marker in _IN_SCOPE_FOLDED)
 
 
 def off_topic_reply(locale: Locale) -> str:

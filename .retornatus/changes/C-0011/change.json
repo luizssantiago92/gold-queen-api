@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "C-0011",
+  "title": "Normalize chat scope accents",
+  "demand": {
+    "schema_version": 1,
+    "statement": "The chat scope guard refused 'Quais foram minhas 3 maiores transações este mês?' as off-topic because ç and ê were not recognized. Matching must fold case and strip accents before comparing the question with the keyword list. Genuinely off-topic questions stay refused. Do not run the production migration.",
+    "kind": "BUG"
+  },
+  "lane": "STANDARD",
+  "active_contract_version": 1,
+  "relations": [],
+  "created_at": "2026-10-07T23:57:53.357854Z"
+}
