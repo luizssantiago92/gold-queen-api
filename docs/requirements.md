@@ -59,26 +59,29 @@ Trace: `app/routers/dashboard.py`, `app/services/treasury.py`, `tests/test_dashb
 
 `GET /v1/advisor/queen-tips` returns `critical_expense`, `management_status`, and `smart_guidance` for the signed-in treasury.
 
-- The prompt is grounded with `treasury.build_ai_summary()`, which includes balances and the bank and chat limits.
+- The prompt is grounded with `treasury.build_ai_summary()`, which includes balances and the bank and chat limits, plus the current-month transactions from `select_grounding_sources()` (at most 20, largest absolute amount first). A negative `BANK` payment whose description matches `fatura` or `pagamento fat` is left out of that list.
+- The response includes `sources`. Each item has `id`, `date`, `description`, `amount`, `category` (the display category), and `account` (the account name). Those are the rows placed in the prompt. The same list is returned on a cache hit.
 - The answer must validate as `QueenTips` (non-empty strings within the field length caps). Failure, or no API key, returns the fixed fallback and `is_guarded` false. A fallback is not cached.
-- A same-day cache hit is keyed by the hash of `queen-tips:` plus the summary, so a new sync changes the key. A hit spends no model call and no daily quota. The stored payload is JSON. A legacy row that is not valid JSON is a miss.
+- A same-day cache hit is keyed by the hash of `queen-tips:` plus the summary plus the grounding block, so a new sync that changes totals or the listed movements changes the key. A hit spends no model call and no daily quota and returns the same `sources`. The stored payload is JSON. A legacy row that is not valid JSON is a miss.
 - Language is the `locale` query when set (`en` or `pt`). Otherwise `Accept-Language` is used. Portuguese (`pt…`) selects `pt`; anything else, including a missing header, selects `en`.
 - The call shares RF05's daily quota. Demo visitors are counted per client address.
 
-Trace: `app/routers/advisor.py`, `app/services/ai.py`, `app/core/locale.py`, `tests/test_advisor_and_chat.py`, `tests/test_openapi.py`.
+Trace: `app/routers/advisor.py`, `app/services/ai.py`, `app/services/grounding.py`, `app/core/locale.py`, `tests/test_advisor_and_chat.py`, `tests/test_grounding.py`, `tests/test_openapi.py`.
 
 ### RF05 — Chat and the shared daily quota
 
 `POST /v1/chat/query` answers one question and returns `remaining_requests` and `daily_limit`.
 
 - The body is `question` (3–500 characters) and `locale` (`en` or `pt`, default `en`). An off-topic question gets a fixed refusal in that language and does not consume quota or call Gemini. A question is in scope when it matches the treasury and app vocabulary in `app/services/chat_scope.py`. The comparison casefolds the question and the vocabulary and strips accents with NFKD, so `transações` matches `transac` and `mês` matches `mes`.
-- An in-scope question is normalized (lowercase, collapsed whitespace) and hashed. The same hash for the same user on the same `usage_date` is served from `chat_cache` and does not consume quota.
-- Otherwise the request consumes one unit of `CHAT_DAILY_LIMIT` (default 5) and then calls the model with the treasury summary and the Queen persona. The prompt asks for at most four sentences and tells the model to stay on treasury and app topics. The code does not truncate a longer answer.
+- An in-scope question is normalized (lowercase, collapsed whitespace). The cache hash is that text plus the grounding block. The same hash for the same user on the same `usage_date` is served from `chat_cache` and does not consume quota.
+- Otherwise the request consumes one unit of `CHAT_DAILY_LIMIT` (default 5) and then calls the model with the treasury summary, the grounding transactions, and the Queen persona. The prompt asks for at most four sentences, tells the model to stay on treasury and app topics, and tells it to cite only the listed movements. The code does not truncate a longer answer.
+- `sources` lists the transactions placed in that prompt. Each item has `id`, `date`, `description`, `amount`, `category` (display category), and `account` (account name). A question about the largest expense (`maior gasto`, `maiores transações`, `largest expense`, and the same shapes) returns that many expenses, biggest first, defaulting to one. A question that names a merchant, category, or account returns the matching rows. Any other in-scope question returns the current-month movements behind the totals, largest absolute amount first, at most 20. A bank card-bill settlement is never a source. An off-topic refusal and a failed model call return `sources: []`.
+- The cache key is the normalized question plus that grounding block. The same question with the same movements is free and returns the same `sources`. A later sync that changes those movements is a new answer and spends one unit.
 - A model failure is not cached. The consumed unit is refunded. A missing API key uses the rule fallback and is treated as a stable answer (it can be cached).
 - Exhausting the quota returns `429` / `rate_limit_reached` with the themed English or Portuguese message. That code is distinct from login throttling (`login_rate_limited`).
 - Consumption is one upsert. On PostgreSQL and SQLite the unique key stops two concurrent requests from both passing the limit. A normal user counts on `(user_id, usage_date)`. A demo user counts on `(user_id, subject_key, usage_date)`.
 
-Trace: `app/routers/chat.py`, `app/services/rate_limit.py`, `app/services/chat_scope.py`, `tests/test_advisor_and_chat.py`, `tests/test_chat_scope.py`, `tests/test_rate_limit.py`.
+Trace: `app/routers/chat.py`, `app/services/rate_limit.py`, `app/services/chat_scope.py`, `app/services/grounding.py`, `tests/test_advisor_and_chat.py`, `tests/test_grounding.py`, `tests/test_chat_scope.py`, `tests/test_rate_limit.py`.
 
 ### RF06 — Accounts and bearer tokens
 

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "C-0014/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "POST /v1/chat/query and GET /v1/advisor/queen-tips return a sources list. Each item has id, date, description, amount, category, and account for a transaction placed in the grounding context for that answer. OpenAPI describes the schema. Off-topic refusals and failed model calls return an empty list. A card-bill settlement is not a source. The largest-expense question returns that expense.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "Chat and Queen's Tips JSON include sources with id, date, description, amount, category, and account.",
+    "A question about the largest expense returns that expense transaction and omits a BANK fatura payment.",
+    "An off-topic refusal and a failed model call return an empty sources list.",
+    "The OpenAPI schema for the chat and queen-tips responses describes sources."
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0014/T-001",
+      "description": "Select the transactions that ground an answer and place that list in the model prompt.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/services/grounding.py",
+        "app/services/ai.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0014/T-002",
+      "description": "Return sources from the chat and queen-tips responses.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/schemas/advisor.py",
+        "app/routers/chat.py",
+        "app/routers/advisor.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0014/T-003",
+      "description": "Cover grounding, empty sources, and the OpenAPI fields with tests.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "tests/test_grounding.py",
+        "tests/test_openapi.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0014/T-004",
+      "description": "Describe the sources field in the changelog, requirements, architecture, and frontend contract.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "CHANGELOG.md",
+        "docs/requirements.md",
+        "docs/architecture.md",
+        "docs/frontend-integration.md"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}
