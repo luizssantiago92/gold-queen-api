@@ -11,12 +11,13 @@ from app.core.ai_guardrails import QueenTips
 from app.core.config import get_settings
 from app.models.entities import Account, BankConnection, Transaction, require_id
 from app.providers.base import Completion
-from app.services.ai import AIEngine
+from app.services.ai import AIEngine, _fallback_chat
 from app.services.grounding import (
     SOURCE_LIMIT,
     format_grounding_block,
     select_grounding_sources,
 )
+from app.services.treasury import build_ai_summary
 
 
 def _seed_card_bill(auth_client: TestClient, session: Session) -> None:
@@ -83,7 +84,13 @@ def test_largest_expense_question_omits_the_card_bill(
     assert selected[0].amount == Decimal("-100.00")
     assert selected[0].category == "CreditCard"
     assert selected[0].account == "Mastercard Black"
-    assert "FATURA" not in format_grounding_block(selected)
+    assert format_grounding_block(selected) == (
+        "Transactions used:\n"
+        f"- id={selected[0].id} date={selected[0].date.isoformat()} "
+        'description="NETFLIX.COM" '
+        f"amount={selected[0].amount} category={selected[0].category} "
+        f'account="{selected[0].account}"'
+    )
 
     body = auth_client.post(
         "/v1/chat/query",
@@ -99,8 +106,8 @@ def test_largest_expense_question_omits_the_card_bill(
             "account": "Mastercard Black",
         }
     ]
-    assert "NETFLIX.COM" in body["answer"]
-    assert "PAGAMENTO FATURA" not in body["answer"]
+    base = _fallback_chat("Qual foi meu maior gasto?", "pt")
+    assert body["answer"] == f"{base} Movimentos consultados: NETFLIX.COM."
 
     cached = auth_client.post(
         "/v1/chat/query",
@@ -218,8 +225,15 @@ def test_queen_tips_sources_omit_the_card_bill(
     def guarded(
         self: AIEngine, summary: str, locale: str = "en"
     ) -> tuple[QueenTips, bool]:
-        assert "NETFLIX.COM" in summary
-        assert "PAGAMENTO FATURA" not in summary
+        user_id = auth_client.get("/v1/auth/me").json()["id"]
+        rows = select_grounding_sources(session, user_id)
+        block = format_grounding_block(rows)
+        expected = f"{build_ai_summary(session, user_id)}\n\n{block}"
+        assert summary == expected
+        assert [row.description for row in rows] == [
+            "NETFLIX.COM",
+            "SMART FIT ACADEMIA",
+        ]
         return (
             QueenTips(
                 critical_expense="Netflix",
@@ -303,12 +317,14 @@ def test_enabled_chat_prompt_names_the_grounding_rows(
         '- id=12 date=2026-08-24 description="NETFLIX.COM" '
         'amount=-100.00 category=CreditCard account="Mastercard Black"'
     )
-    answer, answered = AIEngine(_Recording()).chat(
-        "Qual foi meu maior gasto?", f"Month expenses: R$ 100.00\n\n{block}", "pt"
-    )
+    question = "Qual foi meu maior gasto?"
+    summary = f"Month expenses: R$ 100.00\n\n{block}"
+    answer, answered = AIEngine(_Recording()).chat(question, summary, "pt")
     assert answered is True
     assert answer == "The leak is Netflix."
-    prompt = recorded[-1]["content"]
-    assert "NETFLIX.COM" in prompt
-    assert "Transactions used" in prompt
-    assert "Do not invent movements." in prompt
+    assert recorded[-1]["content"] == (
+        f"Treasury context:\n{summary}\n\n"
+        "When you mention a movement, use only the transactions listed "
+        "under Transactions used. Do not invent movements.\n\n"
+        f"Subject's question: {question}"
+    )
