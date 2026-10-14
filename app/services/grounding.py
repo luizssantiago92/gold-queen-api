@@ -114,7 +114,7 @@ def select_grounding_sources(
             continue
         candidates.append(_to_source(transaction, account))
 
-    if question is not None and _asks_for_largest_expense(question):
+    if question is not None and asks_for_largest_expense(question):
         count = _requested_count(question)
         expenses = [row for row in candidates if row.amount < 0]
         expenses.sort(key=_expense_rank)
@@ -127,6 +127,41 @@ def select_grounding_sources(
 
     ranked = sorted(candidates, key=_amount_rank)
     return ranked[:SOURCE_LIMIT]
+
+
+def largest_expense_answer(sources: list[GroundedTransaction], locale: str) -> str:
+    """Name the selected expenses without calling the model.
+
+    A largest-expense question is already decided by these rows. Waiting on
+    the provider is what turned a 30 second timeout, retried three times,
+    into a generic unavailable reply.
+    """
+    if not sources:
+        if locale == "pt":
+            return "Não há gasto registrado neste mês."
+        return "There is no expense recorded this month."
+    if len(sources) == 1:
+        row = sources[0]
+        money = _money(row.amount)
+        if locale == "pt":
+            return (
+                "O maior gasto deste mês foi "
+                f"{row.description}, {money}, na conta {row.account}."
+            )
+        return (
+            "The largest expense this month was "
+            f"{row.description}, {money}, on account {row.account}."
+        )
+    listed = "; ".join(
+        f"{row.description}, {_money(row.amount)}, {row.account}" for row in sources
+    )
+    if locale == "pt":
+        return f"Os {len(sources)} maiores gastos deste mês foram: {listed}."
+    return f"The {len(sources)} largest expenses this month were: {listed}."
+
+
+def _money(amount: Decimal) -> str:
+    return f"R$ {abs(amount):.2f}"
 
 
 def format_grounding_block(sources: list[GroundedTransaction]) -> str:
@@ -156,7 +191,8 @@ def _to_source(transaction: Transaction, account: Account) -> GroundedTransactio
     )
 
 
-def _asks_for_largest_expense(question: str) -> bool:
+def asks_for_largest_expense(question: str) -> bool:
+    """True when the question asks for the largest expense or expenses."""
     return _LARGEST_EXPENSE.search(fold_text(question)) is not None
 
 

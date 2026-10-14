@@ -16,7 +16,9 @@ from app.services.chat_scope import is_chat_in_scope, off_topic_reply
 from app.services.demo_access import demo_quota_subject
 from app.services.grounding import (
     GroundedTransaction,
+    asks_for_largest_expense,
     format_grounding_block,
+    largest_expense_answer,
     select_grounding_sources,
 )
 
@@ -98,6 +100,28 @@ def query(
     remaining = rate_limit.consume_request(
         session, user_id, payload.locale, subject_key
     )
+    # The largest expense is already the selected rows. Calling the model
+    # here retries a 30 second timeout three times, then drops those rows.
+    if asks_for_largest_expense(payload.question):
+        answer = largest_expense_answer(selected, payload.locale)
+        session.add(
+            ChatCache(
+                user_id=user_id,
+                question_hash=question_hash,
+                question=payload.question,
+                answer=answer,
+                usage_date=today,
+            )
+        )
+        session.commit()
+        return ChatResponse(
+            answer=answer,
+            from_cache=False,
+            remaining_requests=remaining,
+            daily_limit=settings.chat_daily_limit,
+            sources=_response_sources(selected),
+        )
+
     summary = treasury.build_ai_summary(session, user_id)
     answer, answered = ai.chat(
         payload.question, f"{summary}\n\n{grounding}", payload.locale
