@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "C-0015/A-001",
+  "origin_kind": "CONTRACT",
+  "origin_ref": "contract@v1",
+  "objective": "Qual foi meu maior gasto, and the same largest-expense questions, are answered from the selected transactions and do not call the model. A card-bill payment is still omitted. Other treasury questions still call the model.",
+  "scope": null,
+  "constraints": [],
+  "success_conditions": [
+    "Qual foi meu maior gasto returns the largest expense description and amount and does not call the model.",
+    "A BANK fatura payment is not named as that largest expense.",
+    "A repeated largest-expense question is served from cache and still does not call the model.",
+    "A treasury question that is not about the largest expense still calls the model."
+  ],
+  "authority": {
+    "schema_version": 1,
+    "category": "DELEGATED",
+    "rationale": "routine"
+  },
+  "tasks": [
+    {
+      "schema_version": 1,
+      "id": "C-0015/T-001",
+      "description": "Answer a largest-expense question from the selected rows and skip the model.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "app/services/grounding.py",
+        "app/routers/chat.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0015/T-002",
+      "description": "Cover the largest-expense answer, the omitted bill payment, the cache, and a question that still calls the model.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "tests/test_grounding.py"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "C-0015/T-003",
+      "description": "Record the largest-expense path in the changelog, requirements, and architecture.",
+      "lifecycle": "COMPLETED",
+      "depends_on": [],
+      "resources": [
+        "CHANGELOG.md",
+        "docs/requirements.md",
+        "docs/architecture.md"
+      ]
+    }
+  ],
+  "relations": [],
+  "max_attempts": null,
+  "attempt_count": 0
+}

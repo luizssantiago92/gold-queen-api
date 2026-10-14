@@ -11,10 +11,12 @@ from app.core.ai_guardrails import QueenTips
 from app.core.config import get_settings
 from app.models.entities import Account, BankConnection, Transaction, require_id
 from app.providers.base import Completion
-from app.services.ai import AIEngine, _fallback_chat
+from app.services.ai import AIEngine
 from app.services.grounding import (
     SOURCE_LIMIT,
+    GroundedTransaction,
     format_grounding_block,
+    largest_expense_answer,
     select_grounding_sources,
 )
 from app.services.treasury import build_ai_summary
@@ -106,8 +108,9 @@ def test_largest_expense_question_omits_the_card_bill(
             "account": "Mastercard Black",
         }
     ]
-    base = _fallback_chat("Qual foi meu maior gasto?", "pt")
-    assert body["answer"] == f"{base} Movimentos consultados: NETFLIX.COM."
+    assert body["answer"] == (
+        "O maior gasto deste mês foi NETFLIX.COM, R$ 100.00, na conta Mastercard Black."
+    )
 
     cached = auth_client.post(
         "/v1/chat/query",
@@ -283,7 +286,7 @@ def test_off_topic_and_failed_model_return_no_sources(
     monkeypatch.setattr(AIEngine, "chat", broken)
     failed = auth_client.post(
         "/v1/chat/query",
-        json={"question": "Qual foi meu maior gasto?"},
+        json={"question": "Como protejo meu ouro?"},
     ).json()
     assert failed["sources"] == []
     assert failed["from_cache"] is False
@@ -327,4 +330,86 @@ def test_enabled_chat_prompt_names_the_grounding_rows(
         "When you mention a movement, use only the transactions listed "
         "under Transactions used. Do not invent movements.\n\n"
         f"Subject's question: {question}"
+    )
+
+
+def test_largest_expense_does_not_call_the_model(
+    auth_client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def forbidden(
+        self: AIEngine, question: str, summary: str, locale: str = "en"
+    ) -> tuple[str, bool]:
+        raise AssertionError("largest expense must not call the model")
+
+    monkeypatch.setattr(AIEngine, "chat", forbidden)
+    _seed_card_bill(auth_client, session)
+    body = auth_client.post(
+        "/v1/chat/query",
+        json={"question": "Qual foi meu maior gasto?", "locale": "pt"},
+    ).json()
+    assert body["answer"] == (
+        "O maior gasto deste mês foi NETFLIX.COM, R$ 100.00, na conta Mastercard Black."
+    )
+    assert body["sources"][0]["description"] == "NETFLIX.COM"
+    assert body["sources"][0]["amount"] == "-100.00"
+    assert body["from_cache"] is False
+    assert body["remaining_requests"] == get_settings().chat_daily_limit - 1
+
+    cached = auth_client.post(
+        "/v1/chat/query",
+        json={"question": "Qual foi meu maior gasto?", "locale": "pt"},
+    ).json()
+    assert cached["from_cache"] is True
+    assert cached["answer"] == body["answer"]
+    assert cached["sources"] == body["sources"]
+    assert cached["remaining_requests"] == body["remaining_requests"]
+
+
+def test_largest_expense_without_rows_does_not_call_the_model(
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def forbidden(
+        self: AIEngine, question: str, summary: str, locale: str = "en"
+    ) -> tuple[str, bool]:
+        raise AssertionError("largest expense must not call the model")
+
+    monkeypatch.setattr(AIEngine, "chat", forbidden)
+    body = auth_client.post(
+        "/v1/chat/query",
+        json={"question": "What was my biggest expense?", "locale": "en"},
+    ).json()
+    assert body["answer"] == "There is no expense recorded this month."
+    assert body["sources"] == []
+
+
+def test_other_treasury_questions_still_call_the_model(
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[str] = []
+
+    def answer(
+        self: AIEngine, question: str, summary: str, locale: str = "en"
+    ) -> tuple[str, bool]:
+        seen.append(question)
+        return "Guard the gold.", True
+
+    monkeypatch.setattr(AIEngine, "chat", answer)
+    body = auth_client.post(
+        "/v1/chat/query",
+        json={"question": "Como protejo meu ouro?", "locale": "pt"},
+    ).json()
+    assert seen == ["Como protejo meu ouro?"]
+    assert body["answer"] == "Guard the gold."
+
+
+def test_three_largest_expenses_are_named_without_the_model() -> None:
+    today = date.today()
+    rows = [
+        GroundedTransaction(1, today, "LOJA 2", Decimal("-40.00"), "Shopping", "Card"),
+        GroundedTransaction(2, today, "LOJA 3", Decimal("-30.00"), "Shopping", "Card"),
+        GroundedTransaction(3, today, "LOJA 4", Decimal("-20.00"), "Shopping", "Card"),
+    ]
+    assert largest_expense_answer(rows, "pt") == (
+        "Os 3 maiores gastos deste mês foram: "
+        "LOJA 2, R$ 40.00, Card; LOJA 3, R$ 30.00, Card; LOJA 4, R$ 20.00, Card."
     )

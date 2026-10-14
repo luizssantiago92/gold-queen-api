@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0015",
+  "version": 1,
+  "what": "Qual foi meu maior gasto, and the same largest-expense questions, are answered from the selected transactions and do not call the model. A card-bill payment is still omitted. Other treasury questions still call the model.",
+  "constraints": [],
+  "done_criteria": [
+    "Qual foi meu maior gasto returns the largest expense description and amount and does not call the model.",
+    "A BANK fatura payment is not named as that largest expense.",
+    "A repeated largest-expense question is served from cache and still does not call the model.",
+    "A treasury question that is not about the largest expense still calls the model."
+  ],
+  "active": true,
+  "activated_at": "2026-10-14T17:23:10.519258Z"
+}
