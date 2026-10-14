@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `POST /v1/chat/query` and `GET /v1/advisor/queen-tips` return `sources`: the transactions placed in the grounding context (`id`, `date`, `description`, `amount`, `category`, `account`). A largest-expense question returns that expense. A bank card-bill settlement is omitted. An off-topic chat refusal and a failed model call return an empty list.
 - Current requirements, a PostgreSQL entity diagram, architecture decision records, and a security policy. The original brief stays in `docs/history/`.
 
 ### Changed

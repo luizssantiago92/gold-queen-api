@@ -166,11 +166,21 @@ Returns `404` when the transaction does not belong to the authenticated user.
   "management_status": "...",
   "smart_guidance": "...",
   "is_guarded": true,
-  "from_cache": false
+  "from_cache": false,
+  "sources": [
+    {
+      "id": 12,
+      "date": "2026-08-24",
+      "description": "NETFLIX.COM",
+      "amount": "-100.00",
+      "category": "CreditCard",
+      "account": "Mastercard Black"
+    }
+  ]
 }
 ```
 
-These map to the three scroll sections of the "Dicas da Rainha" modal.
+These map to the three scroll sections of the "Dicas da Rainha" modal. `sources` is the movements that grounded the diagnosis. Render them as a collapsible "Transações usadas". `category` is the display category. `account` is the account name. A bank card-bill payment is not included. `amount` is a string with two decimal places, negative when money leaves.
 
 ### `POST /v1/chat/query`
 
@@ -187,11 +197,21 @@ Response:
   "answer": "...",
   "from_cache": false,
   "remaining_requests": 4,
-  "daily_limit": 5
+  "daily_limit": 5,
+  "sources": [
+    {
+      "id": 12,
+      "date": "2026-08-24",
+      "description": "NETFLIX.COM",
+      "amount": "-100.00",
+      "category": "CreditCard",
+      "account": "Mastercard Black"
+    }
+  ]
 }
 ```
 
-Use `remaining_requests` to display the remaining audiences with the Queen.
+Use `remaining_requests` to display the remaining audiences with the Queen. `sources` is the transactions the answer was built from. The same collapsible "Transações usadas" fits under the reply. The list is empty when the Queen refuses an off-topic question or the model call fails. A repeated question returns the same `sources` while those movements are unchanged.
 
 **Shared quota:** `GET /v1/advisor/queen-tips` also consumes this daily limit (default `5`). Opening Queen's Tips after several chat messages may leave fewer requests for chat, and vice versa. A normal account has one counter. Each public demo account is counted per visitor IP, with the same limit.
 

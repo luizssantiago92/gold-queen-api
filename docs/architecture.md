@@ -71,7 +71,7 @@ Demo accounts slide stale transaction dates forward on login (`maybe_refresh_dem
 
 Every generative path (categorize, queen-tips, chat) follows:
 
-1. Build grounding context from `treasury.build_ai_summary()` (balances, categories, product rules).
+1. Build grounding context from `treasury.build_ai_summary()` (balances, categories, product rules) and `select_grounding_sources()` (the transactions named in `sources`).
 2. Call Gemini with a JSON-only prompt.
 3. Parse and validate with `ai_guardrails`.
 4. On failure → rule-based fallback, `is_guarded: false`.

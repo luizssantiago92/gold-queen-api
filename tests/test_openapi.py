@@ -110,6 +110,34 @@ def test_main_schemas_include_examples(client: TestClient) -> None:
         assert isinstance(examples, list) and examples
 
 
+def test_chat_and_queen_tips_expose_transaction_sources(client: TestClient) -> None:
+    schema = _schema(client)
+    components = schema["components"]
+    assert isinstance(components, dict)
+    models = components["schemas"]
+    assert isinstance(models, dict)
+
+    source = models["TransactionSource"]
+    assert isinstance(source, dict)
+    properties = source["properties"]
+    assert isinstance(properties, dict)
+    for field in ("id", "date", "description", "amount", "category", "account"):
+        assert field in properties
+        field_schema = properties[field]
+        assert isinstance(field_schema, dict)
+        assert field_schema["description"]
+
+    for name in ("ChatResponse", "QueenTipsResponse"):
+        model = models[name]
+        assert isinstance(model, dict)
+        model_properties = model["properties"]
+        assert isinstance(model_properties, dict)
+        sources = model_properties["sources"]
+        assert isinstance(sources, dict)
+        assert "transaction" in str(sources["description"]).lower()
+        assert sources["items"]["$ref"].endswith("/TransactionSource")
+
+
 def test_queen_tips_docstring_describes_the_cache_and_quota() -> None:
     doc = queen_tips.__doc__ or ""
     assert "treasury summary" in doc

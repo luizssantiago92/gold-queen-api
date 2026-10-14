@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "change_id": "C-0014",
+  "version": 1,
+  "what": "POST /v1/chat/query and GET /v1/advisor/queen-tips return a sources list. Each item has id, date, description, amount, category, and account for a transaction placed in the grounding context for that answer. OpenAPI describes the schema. Off-topic refusals and failed model calls return an empty list. A card-bill settlement is not a source. The largest-expense question returns that expense.",
+  "constraints": [],
+  "done_criteria": [
+    "Chat and Queen's Tips JSON include sources with id, date, description, amount, category, and account.",
+    "A question about the largest expense returns that expense transaction and omits a BANK fatura payment.",
+    "An off-topic refusal and a failed model call return an empty sources list.",
+    "The OpenAPI schema for the chat and queen-tips responses describes sources."
+  ],
+  "active": true,
+  "activated_at": "2026-10-13T14:46:28.473558Z"
+}

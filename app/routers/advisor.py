@@ -12,14 +12,23 @@ from app.api.deps import AIDep, CurrentUser, SessionDep
 from app.core.ai_guardrails import QueenTips
 from app.core.locale import Locale, parse_accept_language, parse_locale
 from app.models.entities import ChatCache, require_id
-from app.schemas.advisor import QueenTipsResponse
+from app.schemas.advisor import QueenTipsResponse, TransactionSource
 from app.schemas.errors import error_responses
 from app.services import rate_limit, treasury
 from app.services.demo_access import demo_quota_subject
+from app.services.grounding import (
+    GroundedTransaction,
+    format_grounding_block,
+    select_grounding_sources,
+)
 
 router = APIRouter(prefix="/v1/advisor", tags=["advisor"])
 
 _TIPS_CACHE_KEY = "queen-tips"
+
+
+def _response_sources(rows: list[GroundedTransaction]) -> list[TransactionSource]:
+    return [TransactionSource.model_validate(row, from_attributes=True) for row in rows]
 
 
 def _tips_from_cached_answer(answer: str) -> QueenTips | None:
@@ -40,8 +49,9 @@ def _tips_from_cached_answer(answer: str) -> QueenTips | None:
     response_model=QueenTipsResponse,
     summary="Queen's Tips",
     description=(
-        "Return today's diagnosis. A cached result for the same treasury "
-        "summary spends no quota."
+        "Return today's diagnosis and the transactions that ground it. "
+        "A cached result for the same treasury summary and the same "
+        "movements spends no quota."
     ),
     responses=error_responses(
         (401, "The bearer token is missing or invalid."),
@@ -60,10 +70,13 @@ def queen_tips(
     """Return today's Queen's Tips for the signed-in treasury.
 
     The language comes from the locale query when it is set, otherwise from
-    Accept-Language. A same-day cache hit is keyed by the treasury summary,
-    so a repeat of the same summary spends no model call and no daily quota.
+    Accept-Language. A same-day cache hit is keyed by the treasury summary
+    and the grounding movements, so a repeat spends no model call and no
+    daily quota.
     Tips the guardrail rejects are not cached. The call shares that quota
-    with chat. Demo visitors are counted per IP.
+    with chat. Demo visitors are counted per IP. `sources` lists the
+    current-month transactions placed in the prompt. A bank card-bill
+    settlement is left out.
     """
     resolved_locale = (
         parse_locale(locale)
@@ -73,9 +86,16 @@ def queen_tips(
     user_id = require_id(current_user.id)
     subject_key = demo_quota_subject(current_user, request)
     summary = treasury.build_ai_summary(session, user_id)
+    selected = select_grounding_sources(session, user_id)
+    grounding = format_grounding_block(selected)
+    prompt_summary = f"{summary}\n\n{grounding}"
+    sources = _response_sources(selected)
 
-    # The cache key includes the summary so a new sync produces fresh advice.
-    question_hash = hashlib.sha256(f"{_TIPS_CACHE_KEY}:{summary}".encode()).hexdigest()
+    # The cache key includes the summary and the movements so a new sync
+    # produces fresh advice that still matches `sources`.
+    question_hash = hashlib.sha256(
+        f"{_TIPS_CACHE_KEY}:{prompt_summary}".encode()
+    ).hexdigest()
     today = date.today()
 
     cached = session.exec(
@@ -97,10 +117,11 @@ def queen_tips(
                 smart_guidance=cached_tips.smart_guidance,
                 is_guarded=True,
                 from_cache=True,
+                sources=sources,
             )
 
     rate_limit.consume_request(session, user_id, resolved_locale, subject_key)
-    tips, guarded = ai.queen_tips(summary, resolved_locale)
+    tips, guarded = ai.queen_tips(prompt_summary, resolved_locale)
 
     if guarded:
         payload = tips.model_dump_json()
@@ -125,4 +146,5 @@ def queen_tips(
         smart_guidance=tips.smart_guidance,
         is_guarded=guarded,
         from_cache=False,
+        sources=sources,
     )

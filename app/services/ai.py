@@ -200,7 +200,9 @@ class AIEngine:
         prompt = (
             "Given the treasury summary below, produce a financial diagnosis.\n"
             "Answer ONLY with JSON containing the keys "
-            '"critical_expense", "management_status" and "smart_guidance".\n\n'
+            '"critical_expense", "management_status" and "smart_guidance".\n'
+            "Ground the diagnosis in the transactions listed under "
+            "Transactions used. Do not invent movements.\n\n"
             f"Treasury summary:\n{summary}"
         )
 
@@ -216,9 +218,14 @@ class AIEngine:
     ) -> tuple[str, bool]:
         """Answer as the Queen, reporting whether the answer is a stable one."""
         if not self.enabled:
-            return _fallback_chat(question, locale), True
+            return _fallback_chat(question, locale, summary), True
 
-        prompt = f"Treasury context:\n{summary}\n\nSubject's question: {question}"
+        prompt = (
+            f"Treasury context:\n{summary}\n\n"
+            "When you mention a movement, use only the transactions listed "
+            "under Transactions used. Do not invent movements.\n\n"
+            f"Subject's question: {question}"
+        )
         try:
             answer = self._generate(prompt, _queen_persona(locale, chat=True)).strip()
         except Exception as exc:  # noqa: BLE001
@@ -291,22 +298,45 @@ def _fallback_tips(locale: Locale) -> QueenTips:
     )
 
 
-def _fallback_chat(question: str, locale: Locale) -> str:
+def _cited_descriptions(summary: str) -> list[str]:
+    """Descriptions from a grounding block, in listed order, at most three."""
+    found: list[str] = []
+    marker = 'description="'
+    for line in summary.splitlines():
+        start = line.find(marker)
+        if start < 0:
+            continue
+        rest = line[start + len(marker) :]
+        end = rest.find('"')
+        if end > 0:
+            found.append(rest[:end])
+    return found[:3]
+
+
+def _fallback_chat(question: str, locale: Locale, summary: str = "") -> str:
     trimmed = question.strip()[:80]
     if locale == "pt":
-        return (
+        base = (
             "Nobre subdito, os conselheiros do reino estao em concilio e a magia dos "
             "oraculos encontra-se temporariamente indisponivel. Enquanto aguardais, "
             "lembrai-vos: gastai menos do que arrecadais e o vosso tesouro "
             "jamais mingua. "
             f"Retornai em breve para tratarmos de '{trimmed}'."
         )
-    return (
+        cited = _cited_descriptions(summary)
+        if not cited:
+            return base
+        return f"{base} Movimentos consultados: {'; '.join(cited)}."
+    base = (
         "Noble subject, the royal counsellors are in council and the oracle magic is "
         "temporarily unavailable. Until then, remember: spend less than you earn and "
         "your treasury shall never dwindle. "
         f"Return soon so we may discuss '{trimmed}'."
     )
+    cited = _cited_descriptions(summary)
+    if not cited:
+        return base
+    return f"{base} Movements consulted: {'; '.join(cited)}."
 
 
 def get_ai_engine() -> AIEngine:
