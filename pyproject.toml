@@ -7,13 +7,13 @@ readme = "README.md"
 license = "MIT"
 authors = [{ name = "Luiz Santiago" }]
 dependencies = [
-    "fastapi==0.142.2",
-    "starlette==1.7.0",
+    "fastapi==0.162.0",
+    "starlette==1.10.0",
     "uvicorn[standard]==0.54.0",
-    "sqlmodel==0.0.47",
+    "sqlmodel==0.0.48",
     "psycopg2-binary==2.9.13",
-    "alembic==1.20.0",
-    "pydantic-settings==2.15.0",
+    "alembic==1.20.1",
+    "pydantic-settings==2.16.2",
     "email-validator==2.3.0",
     "python-dotenv==1.2.4",
     "PyJWT==2.15.1",
@@ -30,12 +30,12 @@ Changelog = "https://github.com/luizssantiago92/gold-queen-api/blob/main/CHANGEL
 
 [dependency-groups]
 dev = [
-    "pytest==9.1.1",
-    "pytest-asyncio==1.4.0",
+    "pytest==9.2.0",
+    "pytest-asyncio==1.4.1",
     "pytest-cov==7.1.0",
-    "ruff==0.16.10",
-    "mypy==2.4.0",
-    "coverage==7.16.2",
+    "ruff==0.17.3",
+    "mypy==2.4.1",
+    "coverage==7.17.0",
     "pip-audit==2.10.1",
 ]
 
